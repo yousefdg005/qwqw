@@ -1,0 +1,544 @@
+/* ═══════════════════════════════════════════════════════════════
+   AI Legal Workspace — Professional UI v2.1
+   Fix: Material Symbols icon font protection + sidebar fixes
+═══════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block');
+
+/* ═══════════════════════════════════════
+   1. CSS Variables & Root Theme
+═══════════════════════════════════════ */
+:root {
+  --bg-base:          #07090F;
+  --bg-card:          #0D1424;
+  --bg-elevated:      #111D33;
+  --bg-hover:         #182640;
+  --bg-sidebar:       #090D1A;
+  --border:           #1B2840;
+  --border-light:     #243350;
+  --border-accent:    rgba(234, 179, 8, 0.28);
+  --gold:             #EAB308;
+  --gold-dim:         #CA8A04;
+  --gold-bright:      #FDE047;
+  --gold-glow:        rgba(234, 179, 8, 0.12);
+  --gold-glow-strong: rgba(234, 179, 8, 0.22);
+  --text-primary:     #EEF2F8;
+  --text-secondary:   #8B9DC3;
+  --text-muted:       #4D6080;
+  --blue:             #3B82F6;
+  --blue-dim:         rgba(59,130,246,0.08);
+  --green:            #10B981;
+  --green-dim:        rgba(16,185,129,0.08);
+  --red:              #EF4444;
+  --red-dim:          rgba(239,68,68,0.08);
+  --radius-xs:        4px;
+  --radius-sm:        8px;
+  --radius-md:        14px;
+  --radius-lg:        20px;
+  --shadow-sm:        0 2px 8px rgba(0,0,0,0.3);
+  --shadow-card:      0 4px 24px rgba(0,0,0,0.45);
+  --shadow-glow:      0 0 40px rgba(234,179,8,0.08);
+  --shadow-btn:       0 4px 16px rgba(234,179,8,0.28);
+  --transition:       all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════
+   2. CRITICAL: Protect Material Symbols icons FIRST
+   — Must appear before any font-family overrides —
+═══════════════════════════════════════ */
+.material-symbols-rounded,
+.material-symbols-outlined,
+.material-symbols-sharp,
+.material-icons,
+.material-icons-outlined,
+.material-icons-round,
+.material-icons-sharp,
+[class*="material-symbol"],
+[class*="material-icon"],
+[data-testid="stIcon"],
+[data-testid="stIconMaterial"],
+/* Streamlit collapse/expand button icons */
+[data-testid="collapsedControl"],
+[data-testid="expandedControl"],
+button[kind="header"] span,
+button[kind="header"] svg,
+/* Generic icon protection */
+span[class*="icon"],
+i[class*="icon"] {
+    font-family: 'Material Symbols Rounded', 'Material Icons Rounded',
+                 'Material Icons', 'Material Symbols Outlined', sans-serif !important;
+}
+
+/* ═══════════════════════════════════════
+   3. App Background
+═══════════════════════════════════════ */
+.stApp {
+    background-color: var(--bg-base) !important;
+    background-image:
+        radial-gradient(ellipse 70% 40% at 15% 0%,   rgba(234,179,8,0.05)  0%, transparent 60%),
+        radial-gradient(ellipse 50% 30% at 85% 100%, rgba(59,130,246,0.04) 0%, transparent 55%) !important;
+    min-height: 100vh !important;
+}
+
+/* ═══════════════════════════════════════
+   CRITICAL LAYOUT FIX: Main containers must stay LTR
+   so Streamlit's flex layout positions sidebar left,
+   content right — RTL only applies to TEXT inside.
+═══════════════════════════════════════ */
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stHeader"],
+.stApp > div,
+.main {
+    direction: ltr !important;
+}
+
+/* Main content block — fill all available width */
+[data-testid="stMain"] .block-container {
+    max-width: 100% !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+    width: 100% !important;
+}
+
+
+/* ═══════════════════════════════════════
+   4. Typography — TARGETED (no span/div to avoid icon breakage)
+═══════════════════════════════════════ */
+.stApp p,
+.stApp li,
+.stApp td,
+.stApp th,
+.stApp label,
+.stApp .stMarkdown p,
+.stApp .stMarkdown li,
+.stApp .stCaptionContainer {
+    font-family: 'Cairo', 'Inter', sans-serif !important;
+    color: var(--text-secondary);
+}
+
+/* Headings */
+.stApp h1 {
+    font-family: 'Cairo', sans-serif !important;
+    color: var(--gold) !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.5px !important;
+}
+.stApp h2, .stApp h3, .stApp h4 {
+    font-family: 'Cairo', sans-serif !important;
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+}
+
+/* ═══════════════════════════════════════
+   5. Sidebar — Clean Design (no fixed width — let Streamlit collapse naturally)
+═══════════════════════════════════════ */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #090D1A 0%, #070A14 100%) !important;
+    border-right: 1px solid var(--border) !important;
+    box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5) !important;
+    direction: ltr !important; /* Keep LTR for correct sidebar placement */
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    padding: 16px 14px !important;
+    overflow-x: hidden !important;
+}
+
+/* Sidebar text — prevent overflow */
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stMarkdown p {
+    font-family: 'Cairo', sans-serif !important;
+    color: var(--text-secondary) !important;
+    font-size: 13px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.6 !important;
+}
+
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    font-family: 'Cairo', sans-serif !important;
+    color: var(--text-primary) !important;
+    font-size: 15px !important;
+    white-space: normal !important;
+}
+
+/* Sidebar subheader */
+[data-testid="stSidebar"] .stSubheader {
+    font-size: 13px !important;
+    padding-bottom: 6px !important;
+    border-bottom: 1px solid var(--border) !important;
+    margin-bottom: 10px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+}
+
+/* Sidebar API key input */
+[data-testid="stSidebar"] .stTextInput input {
+    background: var(--bg-elevated) !important;
+    border: 1px solid var(--border-light) !important;
+    color: var(--text-primary) !important;
+    font-family: monospace !important;
+    font-size: 12px !important;
+    letter-spacing: 1px !important;
+    border-radius: var(--radius-sm) !important;
+    width: 100% !important;
+}
+[data-testid="stSidebar"] .stTextInput input:focus {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 3px var(--gold-glow) !important;
+}
+
+/* Sidebar selectbox */
+[data-testid="stSidebar"] [data-baseweb="select"] {
+    width: 100% !important;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background: var(--bg-elevated) !important;
+    border-color: var(--border-light) !important;
+    border-radius: var(--radius-sm) !important;
+    font-size: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* ═══════════════════════════════════════
+   6. Sidebar Toggle Button (collapse arrow)
+   — fix "keyboard_double_" text showing —
+═══════════════════════════════════════ */
+/* The toggle button container */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"] {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
+    box-shadow: 3px 0 12px rgba(0,0,0,0.4) !important;
+}
+
+/* Ensure icon inside toggle renders as font, not text */
+[data-testid="collapsedControl"] span,
+[data-testid="stSidebarCollapsedControl"] span,
+section[data-testid="stSidebar"] ~ div button span {
+    font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+    font-size: 20px !important;
+}
+
+/* ═══════════════════════════════════════
+   7. Platform Header
+═══════════════════════════════════════ */
+.header-container {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #0D1B35 0%, #091526 50%, #0E1E38 100%);
+    padding: 28px 36px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-accent);
+    box-shadow: var(--shadow-card), var(--shadow-glow);
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+}
+
+.header-container::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, var(--gold) 40%, var(--gold-bright) 50%, var(--gold) 60%, transparent 100%);
+    opacity: 0.8;
+}
+
+.header-container::after {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(234,179,8,0.07) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.header-text {
+    flex: 1;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+/* ═══════════════════════════════════════
+   8. Buttons
+═══════════════════════════════════════ */
+.stButton > button, .stDownloadButton > button {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%) !important;
+    color: #060A14 !important;
+    font-weight: 700 !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 14px !important;
+    border-radius: var(--radius-sm) !important;
+    border: none !important;
+    padding: 11px 22px !important;
+    box-shadow: var(--shadow-btn) !important;
+    transition: var(--transition) !important;
+    overflow: hidden !important;
+}
+
+.stButton > button:hover, .stDownloadButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 28px rgba(234,179,8,0.45) !important;
+    filter: brightness(1.06) !important;
+}
+
+.stButton > button:active, .stDownloadButton > button:active {
+    transform: translateY(0px) scale(0.99) !important;
+}
+
+/* ═══════════════════════════════════════
+   9. File Upload
+═══════════════════════════════════════ */
+[data-testid="stFileUploadDropzone"] {
+    background: var(--bg-card) !important;
+    border: 2px dashed var(--border-light) !important;
+    border-radius: var(--radius-md) !important;
+    transition: var(--transition) !important;
+}
+
+[data-testid="stFileUploadDropzone"]:hover {
+    border-color: var(--gold) !important;
+    background: var(--gold-glow) !important;
+}
+
+/* ═══════════════════════════════════════
+   10. Tabs
+═══════════════════════════════════════ */
+.stTabs [data-baseweb="tab-list"] {
+    background: var(--bg-card) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 5px !important;
+    gap: 6px !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-sm) !important;
+    margin-bottom: 8px !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: transparent !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text-muted) !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    transition: var(--transition) !important;
+    padding: 10px 20px !important;
+    border: none !important;
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    color: var(--text-primary) !important;
+    background: var(--bg-elevated) !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%) !important;
+    color: #07090F !important;
+    font-weight: 800 !important;
+    box-shadow: 0 3px 12px rgba(234,179,8,0.35) !important;
+}
+
+.stTabs [data-baseweb="tab-panel"] {
+    background: transparent !important;
+    padding-top: 16px !important;
+}
+
+/* ═══════════════════════════════════════
+   11. Progress Bar
+═══════════════════════════════════════ */
+.stProgress > div {
+    background: var(--bg-elevated) !important;
+    border-radius: 999px !important;
+    height: 8px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--border) !important;
+}
+
+.stProgress > div > div {
+    background: linear-gradient(90deg, var(--gold-dim) 0%, var(--gold) 50%, var(--gold-bright) 100%) !important;
+    border-radius: 999px !important;
+}
+
+/* ═══════════════════════════════════════
+   12. Alerts
+═══════════════════════════════════════ */
+[data-testid="stAlert"] {
+    border-radius: var(--radius-md) !important;
+    border-width: 1px !important;
+    padding: 14px 18px !important;
+}
+
+div[data-testid="stSuccessMessage"] {
+    background: var(--green-dim) !important;
+    border-color: rgba(16,185,129,0.3) !important;
+    color: #6EE7B7 !important;
+}
+div[data-testid="stErrorMessage"] {
+    background: var(--red-dim) !important;
+    border-color: rgba(239,68,68,0.3) !important;
+    color: #FCA5A5 !important;
+}
+div[data-testid="stWarningMessage"] {
+    background: rgba(234,179,8,0.06) !important;
+    border-color: rgba(234,179,8,0.25) !important;
+    color: #FDE047 !important;
+}
+div[data-testid="stInfoMessage"] {
+    background: var(--blue-dim) !important;
+    border-color: rgba(59,130,246,0.25) !important;
+    color: #93C5FD !important;
+}
+
+/* ═══════════════════════════════════════
+   13. Data Editor
+═══════════════════════════════════════ */
+[data-testid="stDataEditor"] {
+    border-radius: var(--radius-md) !important;
+    overflow: hidden !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+/* ═══════════════════════════════════════
+   14. Selectbox
+═══════════════════════════════════════ */
+[data-baseweb="select"] > div {
+    background: var(--bg-elevated) !important;
+    border-color: var(--border-light) !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text-primary) !important;
+    transition: var(--transition) !important;
+}
+[data-baseweb="select"] > div:focus-within {
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 0 3px var(--gold-glow) !important;
+}
+[data-baseweb="popover"] {
+    background: var(--bg-elevated) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+/* ═══════════════════════════════════════
+   15. Expander
+═══════════════════════════════════════ */
+[data-testid="stExpander"] {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-sm) !important;
+    overflow: hidden !important;
+}
+[data-testid="stExpander"] summary {
+    color: var(--text-primary) !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 600 !important;
+    padding: 12px 16px !important;
+}
+
+/* ═══════════════════════════════════════
+   16. Alignment Cards
+═══════════════════════════════════════ */
+.alignment-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.alignment-box::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--gold), var(--gold-dim));
+    border-radius: 3px 0 0 3px;
+}
+
+.alignment-box:hover {
+    border-color: var(--border-accent);
+    box-shadow: var(--shadow-card), 0 0 20px var(--gold-glow);
+    transform: translateX(-2px);
+}
+
+.alignment-index {
+    color: var(--gold);
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 6px;
+    font-family: 'Cairo', sans-serif;
+}
+
+/* ═══════════════════════════════════════
+   17. Dividers & Spacing
+═══════════════════════════════════════ */
+hr {
+    border: none !important;
+    border-top: 1px solid var(--border) !important;
+    opacity: 0.6 !important;
+    margin: 20px 0 !important;
+}
+
+[data-testid="stHorizontalBlock"] {
+    gap: 16px !important;
+    align-items: stretch !important;
+}
+
+/* ═══════════════════════════════════════
+   18. Scrollbars
+═══════════════════════════════════════ */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #243350 var(--bg-card);
+}
+*::-webkit-scrollbar        { width: 7px; height: 7px; }
+*::-webkit-scrollbar-track  { background: var(--bg-card); border-radius: 4px; }
+*::-webkit-scrollbar-thumb  { background: #243350; border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: #344d6e; }
+
+/* ═══════════════════════════════════════
+   19. RTL text alignment for Arabic
+═══════════════════════════════════════ */
+.stApp p, .stApp h1, .stApp h2, .stApp h3,
+.stApp h4, .stApp h5, .stApp label {
+    text-align: right;
+}
+
+/* ═══════════════════════════════════════
+   20. Download Buttons
+═══════════════════════════════════════ */
+[data-testid="stDownloadButton"] > button {
+    width: 100% !important;
+    justify-content: center !important;
+    font-size: 13px !important;
+}
+
+/* ═══════════════════════════════════════
+   21. Metric Cards
+═══════════════════════════════════════ */
+[data-testid="stMetric"] {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 16px !important;
+}
+[data-testid="stMetricValue"] {
+    color: var(--gold) !important;
+    font-weight: 800 !important;
+    font-family: 'Cairo', sans-serif !important;
+}
