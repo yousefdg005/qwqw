@@ -117,10 +117,9 @@ api_key = st.sidebar.text_input(
 )
 
 PAID_MODELS_MAPPING = {
-    "⚡ Gemini Flash (معالجة السياقات الطويلة بدقة عالية)": "google/gemini-2.5-flash",
-    "📜 Claude Haiku 3.5 (التزام الصارم بتعليمات التصفية)": "anthropic/claude-haiku-3-5",
-    "🦙 Llama 4 Maverick (نموذج مفتوح عالي الأداء)": "meta-llama/llama-4-maverick",
-    "⚖️ GPT-4o (استخراج هيكلي دقيق وشامل)": "openai/gpt-4o",
+    "⚡ Gemini 3.8 Flash": "google/gemini-3.8-flash",
+    "⚖️ GPT-4o Mini": "openai/gpt-4o-mini",
+    "🦙 Llama 4 Maverick": "meta-llama/llama-4-maverick",
 }
 
 st.sidebar.subheader("🤖 اختيار النموذج المراد استعماله")
@@ -828,7 +827,7 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
 
 4. OUTPUT FORMAT:
    - Output MUST be valid JSON as an object with key "terms", containing an array of objects:
-     {"english_term": "", "arabic_term": "", "sub_domain": "", "document_type": "", "pos": "", "arabic_description": ""}
+     {"english_term": "", "arabic_term": "", "domain": "", "sub_domain": "", "document_type": "", "pos": "", "arabic_description": ""}
 """
 
                 results = []
@@ -871,6 +870,7 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
                                     results.append({
                                         "English Term": _s(item, "english_term"),
                                         "Arabic Term": _s(item, "arabic_term"),
+                                        "Domain": _s(item, "domain", "القانون"),
                                         "Sub Domain": _s(item, "sub_domain", "قانون عام"),
                                         "Document Type": _s(item, "document_type", "نص قانوني"),
                                         "POS": _s(item, "pos", "تركيب اسمي"),
@@ -889,7 +889,7 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
                     df = pd.DataFrame(results)
                     df["_key"] = df["English Term"].map(_term_key) + "|" + df["Arabic Term"].map(_term_key)
                     df = df.groupby("_key", as_index=False, sort=False).agg({
-                        "English Term":"first", "Arabic Term":"first", "Sub Domain":"first",
+                        "English Term":"first", "Arabic Term":"first", "Domain":"first", "Sub Domain":"first",
                         "Document Type":"first", "POS":"first", "Arabic Description":"first",
                         "Source EN":lambda x: "\n---\n".join(dict.fromkeys(x)),
                         "Source AR":lambda x: "\n---\n".join(dict.fromkeys(x)),
@@ -916,7 +916,13 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
         df_res = edited_df  # استخدم النسخة المعدلة نفسها في Excel وCSV وPDF.
 
         excel_buffer = io.BytesIO()
-        excel_df = df_res.drop(columns=["POS"], errors="ignore")
+        excel_df = df_res[["English Term", "Arabic Term", "Arabic Description", "Domain", "Sub Domain"]].rename(columns={
+            "English Term": "English term",
+            "Arabic Term": "Arabic term",
+            "Arabic Description": "Arabic discrbetion",
+            "Domain": "Domain",
+            "Sub Domain": "sub domain",
+        })
         with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
             excel_df.to_excel(writer, index=False)
         excel_buffer.seek(0)
