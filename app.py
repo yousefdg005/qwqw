@@ -129,6 +129,13 @@ selected_model_label = st.sidebar.selectbox(
     index=0,
 )
 selected_model_id = PAID_MODELS_MAPPING[selected_model_label]
+import streamlit as st
+
+# ضعه هنا في القائمة الجانبية
+with st.sidebar:
+    st.markdown("---")
+    st.subheader("📚 القاموس القانوني")
+    st.link_button("🌐 فتح القاموس", "https://dictionaryly.onrender.com", use_container_width=True)
 
 
 # =========================================================
