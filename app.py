@@ -922,8 +922,6 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
                     df.drop(columns=["_key"], inplace=True)
                     df.sort_values(["Frequency", "English Term"], ascending=[False, True], inplace=True, ignore_index=True)
                     st.session_state["results_df"] = df
-                    import requests
-st.session_state["results_df"] = df
 
                     # تجهيز المصطلحات واستدعاء الدالة المعرفة بأعلى الملف
                     terms_to_send = [
@@ -940,7 +938,6 @@ st.session_state["results_df"] = df
 
                 else:
                     st.error("لم يتم العثور على مصطلحات موضوعية بعد التصفية.")
-
     # عرض النتائج والتصدير
     if st.session_state["results_df"] is not None:
         df_res = st.session_state["results_df"]
