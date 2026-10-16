@@ -24,7 +24,23 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 import streamlit as st
 import streamlit.components.v1 as components
+import requests
 
+def send_to_dictionary(extracted_terms):
+    url = "https://dictionaryly.onrender.com/api/receive-terms"
+    headers = {
+        "Authorization": "Bearer my_secure_platform_ingest_token_2026",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "terms": extracted_terms
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        return response.status_code == 201
+    except Exception as e:
+        print(f"Error sending terms: {e}")
+        return False
 # =========================================================
 # 1. إعدادات صفحة Streamlit
 # =========================================================
@@ -907,28 +923,21 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
                     df.sort_values(["Frequency", "English Term"], ascending=[False, True], inplace=True, ignore_index=True)
                     st.session_state["results_df"] = df
                     import requests
+st.session_state["results_df"] = df
 
-def send_to_dictionary(extracted_terms):
-    url = "https://dictionaryly.onrender.com/api/receive-terms"
-    headers = {
-        "Authorization": "Bearer my_secure_platform_ingest_token_2026",
-        "Content-Type": "application/json"
-    }
-    
-    # صيغة البيانات المعتمدة في القاموس
-    payload = {
-        "terms": extracted_terms  # قائمة تحتوي على [{'word': '...', 'definition': '...', 'category': '...'}]
-    }
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 201:
-            return True
-        else:
-            return False
-    except Exception as e:
-        print(f"Error sending terms: {e}")
-        return False
+                    # تجهيز المصطلحات واستدعاء الدالة المعرفة بأعلى الملف
+                    terms_to_send = [
+                        {
+                            "word": str(row.get("English Term", "")).strip(),
+                            "definition": f"{row.get('Arabic Term', '')} - {row.get('Arabic Description', '')}".strip(" -"),
+                            "category": str(row.get("Domain", "General")).strip()
+                        }
+                        for _, row in df.iterrows() if row.get("English Term")
+                    ]
+
+                    if terms_to_send and send_to_dictionary(terms_to_send):
+                        st.success("🚀 تم إرسال المصطلحات المستخرجة تلقائياً إلى القاموس بنجاح!")
+
                 else:
                     st.error("لم يتم العثور على مصطلحات موضوعية بعد التصفية.")
 
