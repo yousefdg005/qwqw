@@ -923,18 +923,18 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
                     df.sort_values(["Frequency", "English Term"], ascending=[False, True], inplace=True, ignore_index=True)
                     st.session_state["results_df"] = df
 
-                    # تجهيز المصطلحات واستدعاء الدالة المعرفة بأعلى الملف
+                    # تجهيز البيانات بالأعمدة المطلوبة بالضبط
                     terms_to_send = [
                         {
-                            "word": str(row.get("English Term", "")).strip(),
-                            "definition": f"{row.get('Arabic Term', '')} - {row.get('Arabic Description', '')}".strip(" -"),
-                            "category": str(row.get("Domain", "General")).strip()
+                            "english_term": str(row.get("English Term", "")).strip(),
+                            "arabic_term": str(row.get("Arabic Term", "")).strip(),
+                            "arabic_description": str(row.get("Arabic Description", "")).strip()
                         }
                         for _, row in df.iterrows() if row.get("English Term")
                     ]
 
                     if terms_to_send and send_to_dictionary(terms_to_send):
-                        st.success("🚀 تم إرسال المصطلحات المستخرجة تلقائياً إلى القاموس بنجاح!")
+                        st.success("🚀 تم إرسال المصطلحات المستخرجة بنجاح إلى القاموس!")
 
                 else:
                     st.error("لم يتم العثور على مصطلحات موضوعية بعد التصفية.")
