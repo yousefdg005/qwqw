@@ -906,6 +906,29 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
                     df.drop(columns=["_key"], inplace=True)
                     df.sort_values(["Frequency", "English Term"], ascending=[False, True], inplace=True, ignore_index=True)
                     st.session_state["results_df"] = df
+                    import requests
+
+def send_to_dictionary(extracted_terms):
+    url = "https://dictionaryly.onrender.com/api/receive-terms"
+    headers = {
+        "Authorization": "Bearer my_secure_platform_ingest_token_2026",
+        "Content-Type": "application/json"
+    }
+    
+    # صيغة البيانات المعتمدة في القاموس
+    payload = {
+        "terms": extracted_terms  # قائمة تحتوي على [{'word': '...', 'definition': '...', 'category': '...'}]
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code == 201:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"Error sending terms: {e}")
+        return False
                 else:
                     st.error("لم يتم العثور على مصطلحات موضوعية بعد التصفية.")
 
