@@ -26,6 +26,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 import requests
 
+import time
+import requests
+
 def send_to_dictionary(extracted_terms):
     url = "https://dictionaryly.onrender.com/api/receive-terms"
     headers = {
@@ -35,12 +38,29 @@ def send_to_dictionary(extracted_terms):
     payload = {
         "terms": extracted_terms
     }
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        return response.status_code == 201
-    except Exception as e:
-        print(f"Error sending terms: {e}")
-        return False
+    
+    max_retries = 3 # عدد محاولات الإرسال
+    
+    for attempt in range(max_retries):
+        try:
+            # جعل مهلة الانتظار 60 ثانية لتستوعب وقت استيقاظ الخادم
+            response = requests.post(url, json=payload, headers=headers, timeout=60)
+            
+            if response.status_code == 201:
+                return True
+            else:
+                print(f"فشل الإرسال برمز: {response.status_code}")
+                return False
+                
+        except requests.exceptions.Timeout:
+            # إذا تأخر الرد (الخادم يستيقظ)، ننتظر 5 ثوانٍ ثم نعيد المحاولة
+            print(f"المحاولة {attempt + 1}: الخادم نائم، جاري إيقاظه وإعادة المحاولة...")
+            time.sleep(5)
+        except Exception as e:
+            print(f"خطأ غير متوقع: {e}")
+            break
+            
+    return False
 # =========================================================
 # 1. إعدادات صفحة Streamlit
 # =========================================================
