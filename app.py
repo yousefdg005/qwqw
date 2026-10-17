@@ -38,29 +38,20 @@ def send_to_dictionary(extracted_terms):
     payload = {
         "terms": extracted_terms
     }
-    
-    max_retries = 3 # عدد محاولات الإرسال
-    
-    for attempt in range(max_retries):
-        try:
-            # جعل مهلة الانتظار 60 ثانية لتستوعب وقت استيقاظ الخادم
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        
+        if response.status_code == 201:
+            return True
+        else:
+            # 👈 هذا السطر سيظهر لك الخطأ بالتفصيل على الشاشة إذا رفض القاموس الاستلام
+            st.error(f"❌ تم الرفض من القاموس! كود الخطأ: {response.status_code} - التفاصيل: {response.text}")
+            return False
             
-            if response.status_code == 201:
-                return True
-            else:
-                print(f"فشل الإرسال برمز: {response.status_code}")
-                return False
-                
-        except requests.exceptions.Timeout:
-            # إذا تأخر الرد (الخادم يستيقظ)، ننتظر 5 ثوانٍ ثم نعيد المحاولة
-            print(f"المحاولة {attempt + 1}: الخادم نائم، جاري إيقاظه وإعادة المحاولة...")
-            time.sleep(5)
-        except Exception as e:
-            print(f"خطأ غير متوقع: {e}")
-            break
-            
-    return False
+    except Exception as e:
+        # 👈 هذا السطر سيظهر لك الخطأ إذا فشل الاتصال بالإنترنت أو الخادم
+        st.error(f"❌ فشل الاتصال بالخادم: {e}")
+        return False
 # =========================================================
 # 1. إعدادات صفحة Streamlit
 # =========================================================
