@@ -32,21 +32,24 @@ def send_to_dictionary(extracted_terms):
         "Authorization": "Bearer my_secure_platform_ingest_token_2026",
         "Content-Type": "application/json"
     }
-    payload = {
-        "terms": extracted_terms
-    }
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=60)
-        
-        if response.status_code == 201:
-            return True
-        else:
-            st.error(f"❌ تم الرفض من القاموس! كود الخطأ: {response.status_code} - التفاصيل: {response.text}")
-            return False
+    
+    # تقسيم المصطلحات إلى دفعات (كل دفعة 10 مصطلحات) لتجنب الضغط وخطأ 500
+    batch_size = 10
+    success_all = True
+    
+    for i in range(0, len(extracted_terms), batch_size):
+        batch = extracted_terms[i:i + batch_size]
+        payload = {"terms": batch}
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=60)
+            if response.status_code != 201:
+                success_all = False
+                st.error(f"❌ تم الرفض في الدفعة {i//batch_size + 1}: كود الخطأ {response.status_code} - التفاصيل: {response.text}")
+        except Exception as e:
+            success_all = False
+            st.error(f"❌ فشل الاتصال في الدفعة {i//batch_size + 1}: {e}")
             
-    except Exception as e:
-        st.error(f"❌ فشل الاتصال بالخادم: {e}")
-        return False
+    return success_all
 
 # =========================================================
 # 1. إعدادات صفحة Streamlit
