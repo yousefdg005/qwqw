@@ -27,9 +27,14 @@ import streamlit.components.v1 as components
 import requests
 
 def send_to_dictionary(extracted_terms):
-    url = "https://dictionaryly.onrender.com/api/receive-terms"
+    url = os.environ.get("DICTIONARY_API_URL", "https://dictionaryly.onrender.com/api/receive-terms")
+    ingest_key = os.environ.get("INGEST_API_KEY")
+    if not ingest_key:
+        st.error("❌ متغير البيئة INGEST_API_KEY غير مهيأ. يرجى ضبط المفتاح في المتغيرات البيئية لإرسال المصطلحات تلقائياً.")
+        return False
+
     headers = {
-        "Authorization": "Bearer my_secure_platform_ingest_token_2026",
+        "Authorization": f"Bearer {ingest_key}",
         "Content-Type": "application/json"
     }
     
