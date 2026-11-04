@@ -709,12 +709,17 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
                     st.session_state["results_df"] = df
 
                     # تجهيز الإرسال إلى القاموس: بدون عمود ID لأن القاموس لديه نظام ترقيم خاص به
+                    # إرسال العمودين الجديدين (source text ar و source text en) بالصيغتين (بالمسافة والشرطة السفلية) لضمان التوافق التام مع واجهة القاموس
                     terms_to_send = [
                         {
                             "en": str(row.get("en", "")).strip(),
                             "ar": str(row.get("ar", "")).strip(),
-                            "definition": str(row.get("Definition", "")).strip(),
-                            "subject field": str(row.get("Subject field", "")).strip()
+                            "definition": str(row.get("Definition", "") or row.get("definition", "")).strip(),
+                            "subject field": str(row.get("Subject field", "") or row.get("subject field", "")).strip(),
+                            "source_text_en": str(row.get("en Source text", "") or row.get("source text en", "") or row.get("source_text_en", "")).strip(),
+                            "source_text_ar": str(row.get("ar Source text", "") or row.get("source text ar", "") or row.get("source_text_ar", "")).strip(),
+                            "source text en": str(row.get("en Source text", "") or row.get("source text en", "") or row.get("source_text_en", "")).strip(),
+                            "source text ar": str(row.get("ar Source text", "") or row.get("source text ar", "") or row.get("source_text_ar", "")).strip(),
                         }
                         for _, row in df.iterrows() if row.get("en")
                     ]

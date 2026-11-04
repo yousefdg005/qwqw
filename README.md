@@ -66,7 +66,7 @@
   - 📚 Arabic legal definition (`Definition`)
   - 🏷️ Subject field (`Subject field` — e.g., *International Public Law*, *Contractual Obligations*)
   - 💬 Source sentence the term was extracted from (`en Source text` + `ar Source text`)
-- **Automatic push** to the [AI Legal Dictionary](https://dictionaryly.onrender.com) platform for admin review (payload: `en`, `ar`, `definition`, `subject field` only — **no `ID`**, the dictionary applies its own numbering).
+- **Automatic push** to the [AI Legal Dictionary](https://dictionaryly.onrender.com) platform for admin review (payload: `en`, `ar`, `definition`, `subject field`, `source_text_en`, `source_text_ar` — **no `ID`**, the dictionary applies its own numbering).
 - **Two export formats** (no PDF/Word generation):
   - 📊 `.xlsx` — Excel glossary
   - 📄 `.csv` — UTF-8 CSV with BOM (for Arabic compatibility)
