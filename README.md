@@ -59,13 +59,14 @@
   | 🦙 Llama 4 Maverick | Open-weight alternative |
 - **Strict filtering** removes stopwords, procedural phrases, article numbers, and short non-legal tokens.
 - **Smart deduplication** via text normalization + groupby (casefold, punctuation-stripped keys).
-- Each extracted term includes:
-  - 🇬🇧 English term
-  - 🇸🇦 Arabic equivalent
-  - 📚 Arabic legal definition
-  - 🏷️ Subject field (e.g., *International Public Law*, *Contractual Obligations*)
-  - 💬 Source context sentences (EN + AR)
-- **Automatic push** to the [AI Legal Dictionary](https://dictionaryly.onrender.com) platform for admin review.
+- Each extracted term includes (columns: `ID`, `en`, `ar`, `Definition`, `Subject field`, `en Source text`, `ar Source text`):
+  - 🔢 Sequential `ID` numbering the terms (1..N after dedup — renumbered on export)
+  - 🇬🇧 English term (`en`)
+  - 🇸🇦 Arabic equivalent (`ar`)
+  - 📚 Arabic legal definition (`Definition`)
+  - 🏷️ Subject field (`Subject field` — e.g., *International Public Law*, *Contractual Obligations*)
+  - 💬 Source sentence the term was extracted from (`en Source text` + `ar Source text`)
+- **Automatic push** to the [AI Legal Dictionary](https://dictionaryly.onrender.com) platform for admin review (payload: `en`, `ar`, `definition`, `subject field` only — **no `ID`**, the dictionary applies its own numbering).
 - **Three export formats:**
   - 📊 `.xlsx` — Excel glossary
   - 📄 `.csv` — UTF-8 CSV with BOM (for Arabic compatibility)

@@ -385,10 +385,10 @@ def generate_pdf_cards_bytes(df):
         data = [
             [en_par(row.get("en", ""), cell_val_en_style), lbl("المصطلح بالإنجليزي (en)")],
             [ar_val("ar"), lbl("المقابل بالعربي (ar)")],
-            [ar_val("subject field", "قانون عام"), lbl("المجال (subject field)")],
-            [en_par(row.get("Source EN", ""), cell_val_en_style), lbl("السياق الإنجليزي (Context EN)")],
-            [ar_val("Source AR"), lbl("السياق العربي (Context AR)")],
-            [ar_val("definition"), lbl("الشرح والتعريف (definition)")],
+            [ar_val("Definition"), lbl("الشرح والتعريف (Definition)")],
+            [ar_val("Subject field", "قانون عام"), lbl("المجال (Subject field)")],
+            [en_par(row.get("en Source text", ""), cell_val_en_style), lbl("النص المصدر بالإنجليزي (en Source text)")],
+            [ar_val("ar Source text"), lbl("النص المصدر بالعربي (ar Source text)")],
         ]
 
         t = Table(data, colWidths=[VAL_W, LBL_W])
@@ -738,6 +738,7 @@ with tab2:
                 )
 
                 system_prompt = """You are an expert legal terminologist specializing in general legal systems, international law, contracts, and legislations.
+I will provide you with parallel legal texts in English and Arabic.
 
 STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
 
@@ -751,10 +752,13 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
    - DO NOT extract preamble, procedural, or introductory phrases (e.g., "Having reviewed", "Pursuant to", "In accordance with", "بعد الاطلاع على", "بناء على").
    - DO NOT extract dates, article numbers, or general administrative filler words.
 
-4. OUTPUT FORMAT:
-   - Output MUST be valid JSON as an object with key "terms", containing an array of objects EXACTLY matching this structure:
-     {"ID": "", "en": "", "ar": "", "definition": "", "subject field": ""}
-   - Ensure "definition" contains the Arabic legal explanation.
+4. DEFINITION REQUIREMENT:
+   - The "definition" must be a concise, precise, and professional Arabic legal explanation of the term based on the context.
+
+5. OUTPUT FORMAT:
+   - Output MUST be STRICTLY valid JSON ONLY. Do not include any markdown formatting (like `json), introductory greetings, or conversational text before or after the JSON.
+   - The JSON must be an object with the key "terms", containing an array of objects EXACTLY matching this structure:
+     {"ID": "incremental integer starting from 1", "en": "English term", "ar": "Arabic equivalent", "definition": "Concise Arabic legal explanation", "subject field": "Detected sub-field"}
 """
 
                 results = []
@@ -786,20 +790,25 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
                             response_format={"type": "json_object"},
                         )
 
-                        raw = json.loads(response.choices[0].message.content)
+                        raw_text = response.choices[0].message.content or ""
+                        # حماية إضافية: إزالة أي محيط Markdown قد يضيفه النموذج رغم التعليمات الصارمة
+                        cleaned = raw_text.strip()
+                        if cleaned.startswith("```"):
+                            cleaned = re.sub(r"^```[a-zA-Z]*\s*", "", cleaned)
+                            cleaned = re.sub(r"\s*```$", "", cleaned).strip()
+                        raw = json.loads(cleaned)
                         terms = raw.get("terms", []) if isinstance(raw, dict) else raw
 
                         if terms and isinstance(terms, list):
                             for item in terms:
                                 if isinstance(item, dict) and item.get("en") and not _is_low_value_term(item.get("en")):
                                     results.append({
-                                        "ID": _s(item, "ID", str(len(results) + 1)),
                                         "en": _s(item, "en"),
                                         "ar": _s(item, "ar"),
-                                        "definition": _s(item, "definition"),
-                                        "subject field": _s(item, "subject field", "قانون عام"),
-                                        "Source EN": en_text,
-                                        "Source AR": ar_text,
+                                        "Definition": _s(item, "definition"),
+                                        "Subject field": _s(item, "subject field", "قانون عام"),
+                                        "en Source text": en_text,
+                                        "ar Source text": ar_text,
                                     })
                     except Exception as e:
                         st.warning(f"تنبيه في الوحدة {i+1}: {e}")
@@ -812,22 +821,24 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
                     df = pd.DataFrame(results)
                     df["_key"] = df["en"].map(_term_key) + "|" + df["ar"].map(_term_key)
                     df = df.groupby("_key", as_index=False, sort=False).agg({
-                        "ID": "first", "en":"first", "ar":"first", "definition":"first", "subject field":"first",
-                        "Source EN":lambda x: "\n---\n".join(dict.fromkeys(x)),
-                        "Source AR":lambda x: "\n---\n".join(dict.fromkeys(x)),
+                        "en":"first", "ar":"first", "Definition":"first", "Subject field":"first",
+                        "en Source text":lambda x: "\n---\n".join(dict.fromkeys(x)),
+                        "ar Source text":lambda x: "\n---\n".join(dict.fromkeys(x)),
                     })
-                    
+
                     df.drop(columns=["_key"], inplace=True)
+                    # ترقيم تسلسلي للمصطلحات (1..N) بعد إزالة التكرار
+                    df["ID"] = range(1, len(df) + 1)
+                    df = df[["ID", "en", "ar", "Definition", "Subject field", "en Source text", "ar Source text"]]
                     st.session_state["results_df"] = df
 
-                    # التجهيز للإرسال إلى القاموس بالأعمدة الجديدة
+                    # تجهيز الإرسال إلى القاموس: بدون عمود ID لأن القاموس لديه نظام ترقيم خاص به
                     terms_to_send = [
                         {
-                            "ID": str(row.get("ID", "")).strip(),
                             "en": str(row.get("en", "")).strip(),
                             "ar": str(row.get("ar", "")).strip(),
-                            "definition": str(row.get("definition", "")).strip(),
-                            "subject field": str(row.get("subject field", "")).strip()
+                            "definition": str(row.get("Definition", "")).strip(),
+                            "subject field": str(row.get("Subject field", "")).strip()
                         }
                         for _, row in df.iterrows() if row.get("en")
                     ]
@@ -850,12 +861,15 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
         st.session_state["results_df"] = edited_df
         df_res = edited_df
 
-        # تجهيز التصدير ليقتصر على الأعمدة الخمسة فقط
+        # تجهيز التصدير بجميع الأعمدة المطلوبة (بدون ملف Word)
+        export_df = df_res.copy()
+        # إعادة الترقيم التسلسلي للمصطلحات في ملفات التحميل حتى بعد أي تعديل أو حذف بالجدول
+        export_df["ID"] = range(1, len(export_df) + 1)
+        export_df = export_df[["ID", "en", "ar", "Definition", "Subject field", "en Source text", "ar Source text"]]
+
         excel_buffer = io.BytesIO()
-        excel_df = df_res[["ID", "en", "ar", "definition", "subject field"]]
-        
         with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-            excel_df.to_excel(writer, index=False)
+            export_df.to_excel(writer, index=False)
         excel_buffer.seek(0)
 
         try:
@@ -864,7 +878,7 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
             pdf_buffer = None
             st.warning(f"تعذر توليد بطاقات PDF: {e}")
 
-        csv_data = excel_df.to_csv(index=False).encode("utf-8-sig")
+        csv_data = export_df.to_csv(index=False).encode("utf-8-sig")
         col_d1, col_d2, col_d3 = st.columns(3)
         with col_d1:
             st.download_button(
