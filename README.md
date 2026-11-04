@@ -67,17 +67,16 @@
   - 🏷️ Subject field (`Subject field` — e.g., *International Public Law*, *Contractual Obligations*)
   - 💬 Source sentence the term was extracted from (`en Source text` + `ar Source text`)
 - **Automatic push** to the [AI Legal Dictionary](https://dictionaryly.onrender.com) platform for admin review (payload: `en`, `ar`, `definition`, `subject field` only — **no `ID`**, the dictionary applies its own numbering).
-- **Three export formats:**
+- **Two export formats** (no PDF/Word generation):
   - 📊 `.xlsx` — Excel glossary
   - 📄 `.csv` — UTF-8 CSV with BOM (for Arabic compatibility)
-  - 🗂️ `.pdf` — Formatted A4 terminology cards (ReportLab, RTL-ready Arabic)
 
 ---
 
 ## 🏗️ Architecture | البنية التقنية
 
 ```
-app.py (899 lines — entire application)
+app.py (entire application)
 │
 ├── normalize_text()            Unicode NFKC + invisible char removal
 ├── align_segments()            DP sentence alignment (1:1 / 1:2 / 2:1)
@@ -87,9 +86,7 @@ app.py (899 lines — entire application)
 ├── process_docx_text_to_segments()  Regex sentence splitter (abbrev-aware)
 ├── parse_tmx_bytes()           TMX XML parser (xml.etree)
 ├── generate_tmx_file()         TMX 3.0 builder
-├── generate_pdf_cards_bytes()  ReportLab A4 terminology cards
 ├── send_to_dictionary()        HTTP POST batches → dictionaryly.onrender.com
-├── prepare_arabic_text()       arabic-reshaper + python-bidi for RTL PDF
 └── _declare_alignment_studio() Writes + registers embedded JS component
 ```
 
@@ -132,9 +129,6 @@ openai             # OpenAI-compatible SDK (used for OpenRouter)
 pandas             # Data manipulation & deduplication
 openpyxl           # Excel export
 python-docx        # DOCX parsing
-reportlab          # PDF generation
-arabic-reshaper    # Arabic text shaping for PDF
-python-bidi        # Bidirectional text algorithm
 ```
 
 ---
@@ -164,7 +158,7 @@ EN .docx + AR .docx
   Filter + Deduplicate                       │
        ↓                                     │
   ┌─────────────────────────────────┐        │
-  │  Export: .xlsx / .csv / .pdf   │        │
+  │  Export: .xlsx / .csv           │        │
   └─────────────────────────────────┘        │
        ↓                                     │
   Auto-push to AI Legal Dictionary ←─────────┘

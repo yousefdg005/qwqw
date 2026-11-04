@@ -3,6 +3,3 @@ openai
 pandas
 openpyxl
 python-docx
-reportlab
-arabic-reshaper
-python-bidi

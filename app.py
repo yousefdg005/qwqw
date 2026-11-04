@@ -7,21 +7,12 @@ import re
 import time
 import unicodedata
 import xml.etree.ElementTree as ET
-from html import escape as html_escape
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
-import arabic_reshaper
 import pandas as pd
-from bidi.algorithm import get_display
 from docx import Document
 from openai import OpenAI
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 import streamlit as st
 import streamlit.components.v1 as components
 import requests
@@ -80,17 +71,7 @@ def load_css(file_name="style.css"):
 load_css("style.css")
 
 # =========================================================
-# 3. دالة معالجة النص العربي للـ PDF (ReportLab)
-# =========================================================
-def prepare_arabic_text(text):
-    if not text or not isinstance(text, str):
-        return ""
-    reshaped_text = arabic_reshaper.reshape(text)
-    bidi_text = get_display(reshaped_text)
-    return bidi_text
-
-# =========================================================
-# 4. الهيدر العام للمنصة (Neutral Branding)
+# 3. الهيدر العام للمنصة (Neutral Branding)
 # =========================================================
 st.markdown(
     """
@@ -120,7 +101,7 @@ st.markdown(
 )
 
 # =========================================================
-# 5. الشريط الجانبي للإعدادات
+# 4. الشريط الجانبي للإعدادات
 # =========================================================
 st.sidebar.header("⚙️ إعدادات النظام")
 
@@ -163,7 +144,7 @@ with st.sidebar:
     st.link_button("🌐 فتح القاموس", "https://dictionaryly.onrender.com", use_container_width=True)
 
 # =========================================================
-# 6. إدارة حالة الجلسة (Session State)
+# 5. إدارة حالة الجلسة (Session State)
 # =========================================================
 if "aligned_pairs" not in st.session_state:
     st.session_state["aligned_pairs"] = []
@@ -176,7 +157,7 @@ if "alignment_draft" not in st.session_state:
 
 
 # =========================================================
-# 7. دوال استخراج وقراءة ملفات Word و TMX
+# 6. دوال استخراج وقراءة ملفات Word و TMX
 # =========================================================
 _INVISIBLE_RE = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]")
 _XML_BAD_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
@@ -302,112 +283,7 @@ def generate_tmx_file(pairs):
 
 
 # =========================================================
-# 8. دالة توليد بطاقات الـ PDF
-# =========================================================
-_FONT_CANDIDATES = [
-    ("fonts/Amiri-Regular.ttf", "fonts/Amiri-Bold.ttf"),
-    ("fonts/NotoNaskhArabic-Regular.ttf", "fonts/NotoNaskhArabic-Bold.ttf"),
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
-    ("/usr/share/fonts/truetype/noto/NotoNaskhArabic-Regular.ttf", "/usr/share/fonts/truetype/noto/NotoNaskhArabic-Bold.ttf"),
-    ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"),
-    ("C:/Windows/Fonts/tahoma.ttf", "C:/Windows/Fonts/tahomabd.ttf"),
-    ("/Library/Fonts/Arial Unicode.ttf", "/Library/Fonts/Arial Unicode.ttf"),
-    ("/System/Library/Fonts/Supplemental/Arial.ttf", "/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
-]
-_PDF_FONTS = None
-
-def get_pdf_fonts():
-    global _PDF_FONTS
-    if _PDF_FONTS:
-        return _PDF_FONTS
-    for reg, bold in _FONT_CANDIDATES:
-        if os.path.exists(reg):
-            try:
-                pdfmetrics.registerFont(TTFont("AppFont", reg))
-                pdfmetrics.registerFont(TTFont("AppFont-Bold", bold if os.path.exists(bold) else reg))
-                _PDF_FONTS = ("AppFont", "AppFont-Bold")
-                return _PDF_FONTS
-            except Exception:
-                continue
-    _PDF_FONTS = ("Helvetica", "Helvetica-Bold")
-    return _PDF_FONTS
-
-def _wrap_logical(text, font, size, max_width):
-    lines, cur = [], ""
-    for word in str(text).split():
-        cand = f"{cur} {word}".strip()
-        if cur and pdfmetrics.stringWidth(prepare_arabic_text(cand), font, size) > max_width:
-            lines.append(cur)
-            cur = word
-        else:
-            cur = cand
-    if cur:
-        lines.append(cur)
-    return lines or [""]
-
-def ar_par(text, style, max_width):
-    lines = _wrap_logical(text, style.fontName, style.fontSize, max_width)
-    html = "<br/>".join(html_escape(prepare_arabic_text(l)) for l in lines)
-    return Paragraph(html, style)
-
-def en_par(text, style):
-    return Paragraph(html_escape(str(text)), style)
-
-def generate_pdf_cards_bytes(df):
-    font, font_bold = get_pdf_fonts()
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-    story = []
-    styles = getSampleStyleSheet()
-
-    title_style = ParagraphStyle("TitleStyle", parent=styles["Heading1"], fontName=font_bold, fontSize=18, alignment=1, textColor=colors.HexColor("#0F172A"), leading=26)
-    sub_style = ParagraphStyle("SubStyle", parent=styles["Normal"], fontName=font, fontSize=10, alignment=1, textColor=colors.HexColor("#64748B"), leading=14)
-    cell_title_style = ParagraphStyle("CellTitle", fontName=font_bold, fontSize=10, alignment=2, leading=15, textColor=colors.HexColor("#1E293B"))
-    cell_val_style = ParagraphStyle("CellVal", fontName=font, fontSize=10, alignment=2, leading=15, textColor=colors.HexColor("#0F172A"))
-    cell_val_en_style = ParagraphStyle("CellValEn", parent=cell_val_style, alignment=0)
-
-    VAL_W, LBL_W, PAD = 360, 160, 6
-    val_text_w = VAL_W - 2 * PAD - 4
-    lbl_text_w = LBL_W - 2 * PAD - 4
-
-    story.append(ar_par("بطاقات المصطلحات القانونية الموثقة (Legal Terminology Cards)", title_style, 520))
-    story.append(ar_par("منصة التحليل والاستخراج القانوني الذكي | إعداد: يوسف نورالدين", sub_style, 520))
-    story.append(Spacer(1, 15))
-
-    total = len(df)
-    for n, (_, row) in enumerate(df.iterrows(), start=1):
-        story.append(ar_par(f"بطاقة مصطلح رقم: ({n:02d} / {total:02d})", cell_title_style, 520))
-        story.append(Spacer(1, 5))
-
-        def lbl(t): return ar_par(t, cell_title_style, lbl_text_w)
-        def ar_val(key, default=""): return ar_par(str(row.get(key, default) or default), cell_val_style, val_text_w)
-
-        data = [
-            [en_par(row.get("en", ""), cell_val_en_style), lbl("المصطلح بالإنجليزي (en)")],
-            [ar_val("ar"), lbl("المقابل بالعربي (ar)")],
-            [ar_val("Definition"), lbl("الشرح والتعريف (Definition)")],
-            [ar_val("Subject field", "قانون عام"), lbl("المجال (Subject field)")],
-            [en_par(row.get("en Source text", ""), cell_val_en_style), lbl("النص المصدر بالإنجليزي (en Source text)")],
-            [ar_val("ar Source text"), lbl("النص المصدر بالعربي (ar Source text)")],
-        ]
-
-        t = Table(data, colWidths=[VAL_W, LBL_W])
-        t.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("PADDING", (0, 0), (-1, -1), PAD),
-        ]))
-        story.append(t)
-        story.append(Spacer(1, 15))
-        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#E2E8F0"), spaceAfter=15))
-
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
-
-# =========================================================
-# 9. علامات التبويب الرئيسية (Tabs)
+# 7. علامات التبويب الرئيسية (Tabs)
 # =========================================================
 tab1, tab2 = st.tabs(["Alignment Studio (beta)", "AI Term Extractor"])
 
@@ -712,7 +588,7 @@ with tab1:
             st.error("⚠️ تعذر استخراج النصوص من ملفات Word المرفوعة.")
 
 # ---------------------------------------------------------
-# Tab 2: الاستخراج الذكي وتوليد البطاقات
+# Tab 2: الاستخراج الذكي والتصدير
 # ---------------------------------------------------------
 with tab2:
     st.subheader("🔍 استخراج المصطلحات عبر الذكاء الاصطناعي")
@@ -861,7 +737,7 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
         st.session_state["results_df"] = edited_df
         df_res = edited_df
 
-        # تجهيز التصدير بجميع الأعمدة المطلوبة (بدون ملف Word)
+        # تجهيز التصدير بجميع الأعمدة المطلوبة (Excel وCSV فقط — بدون PDF أو Word)
         export_df = df_res.copy()
         # إعادة الترقيم التسلسلي للمصطلحات في ملفات التحميل حتى بعد أي تعديل أو حذف بالجدول
         export_df["ID"] = range(1, len(export_df) + 1)
@@ -872,14 +748,8 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
             export_df.to_excel(writer, index=False)
         excel_buffer.seek(0)
 
-        try:
-            pdf_buffer = generate_pdf_cards_bytes(df_res)
-        except Exception as e:
-            pdf_buffer = None
-            st.warning(f"تعذر توليد بطاقات PDF: {e}")
-
         csv_data = export_df.to_csv(index=False).encode("utf-8-sig")
-        col_d1, col_d2, col_d3 = st.columns(3)
+        col_d1, col_d2 = st.columns(2)
         with col_d1:
             st.download_button(
                 label="📥 تنزيل مسرد المصطلحات (Excel)",
@@ -889,17 +759,9 @@ STRICT FILTERING & AUTOMATIC CONTEXT DETECTION RULES:
             )
         with col_d2:
             st.download_button("📄 تنزيل CSV (UTF-8)", data=csv_data, file_name="Extracted_Legal_Glossary.csv", mime="text/csv; charset=utf-8")
-        with col_d3:
-            if pdf_buffer is not None:
-                st.download_button(
-                    label="📑 تنزيل البطاقات الترجمية (PDF Cards)",
-                    data=pdf_buffer,
-                    file_name="Legal_Terminology_Cards.pdf",
-                    mime="application/pdf",
-                )
 
 # =========================================================
-# 10. التذييل بأسفل الصفحة
+# 8. التذييل بأسفل الصفحة
 # =========================================================
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown(
@@ -909,7 +771,7 @@ st.markdown(
     <p style="font-size: 15px; color: #E5E7EB; margin: 5px;"><b>إعداد وتطوير:</b> يوسف نورالدين</p>
     <p style="font-size: 15px; color: #E5E7EB; margin: 5px;">📱 <b>الهاتف:</b> <a href="tel:0928756918" style="color: #EAB308; text-decoration: none;">0928756918</a> | ✉️ <b>البريد:</b> <a href="mailto:ywsfalmqmz@gmail.com" style="color: #EAB308; text-decoration: none;">ywsfalmqmz@gmail.com</a></p>
     <hr style="margin: 15px auto; width: 40%; border-top: 1px solid #1E293B;">
-    <p style="font-size: 12px; color: #9CA3AF;">جميع الحقوق محفوظة © المنصة العامة للتحليل والاستخراج القانوني وتوليد البطاقات</p>
+    <p style="font-size: 12px; color: #9CA3AF;">جميع الحقوق محفوظة © المنصة العامة للتحليل والاستخراج القانوني</p>
 </div>
 """,
     unsafe_allow_html=True,
