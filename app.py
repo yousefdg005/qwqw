@@ -36,14 +36,25 @@ def send_to_dictionary(extracted_terms):
     for i in range(0, len(extracted_terms), batch_size):
         batch = extracted_terms[i:i + batch_size]
         payload = {"terms": batch}
-        try:
-            response = requests.post(url, json=payload, headers=headers, timeout=60)
-            if response.status_code != 201:
-                success_all = False
-                st.error(f"❌ تم الرفض في الدفعة {i//batch_size + 1}: كود الخطأ {response.status_code} - التفاصيل: {response.text}")
-        except Exception as e:
-            success_all = False
-            st.error(f"❌ فشل الاتصال في الدفعة {i//batch_size + 1}: {e}")
+        # إعادة محاولة تلقائية عند سكون السيرفرليس (Neon Serverless Cold Start)
+        batch_success = False
+        for attempt in range(2):
+            try:
+                response = requests.post(url, json=payload, headers=headers, timeout=60)
+                if response.status_code == 201:
+                    batch_success = True
+                    break
+                elif attempt == 0:
+                    time.sleep(2)
+                else:
+                    success_all = False
+                    st.error(f"❌ تم الرفض في الدفعة {i//batch_size + 1}: كود الخطأ {response.status_code} - التفاصيل: {response.text}")
+            except Exception as e:
+                if attempt == 0:
+                    time.sleep(2)
+                else:
+                    success_all = False
+                    st.error(f"❌ فشل الاتصال في الدفعة {i//batch_size + 1}: {e}")
             
     return success_all
 
