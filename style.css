@@ -1,44 +1,46 @@
 /* ═══════════════════════════════════════════════════════════════
-   AI Legal Workspace — Professional UI v2.1
-   Fix: Material Symbols icon font protection + sidebar fixes
+   LexTerm — Legal Terminology Workspace | Professional UI v3.0
+   Visual Identity: Owl Navy (#16294A) & Gold (#C9963C)
 ═══════════════════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block');
 
 /* ═══════════════════════════════════════
-   1. CSS Variables & Root Theme
+   1. CSS Variables & Root Theme — LexTerm Identity
 ═══════════════════════════════════════ */
 :root {
-  --bg-base:          #07090F;
-  --bg-card:          #0D1424;
-  --bg-elevated:      #111D33;
-  --bg-hover:         #182640;
-  --bg-sidebar:       #090D1A;
-  --border:           #1B2840;
-  --border-light:     #243350;
-  --border-accent:    rgba(234, 179, 8, 0.28);
-  --gold:             #EAB308;
-  --gold-dim:         #CA8A04;
-  --gold-bright:      #FDE047;
-  --gold-glow:        rgba(234, 179, 8, 0.12);
-  --gold-glow-strong: rgba(234, 179, 8, 0.22);
-  --text-primary:     #EEF2F8;
-  --text-secondary:   #8B9DC3;
-  --text-muted:       #4D6080;
-  --blue:             #3B82F6;
-  --blue-dim:         rgba(59,130,246,0.08);
-  --green:            #10B981;
-  --green-dim:        rgba(16,185,129,0.08);
-  --red:              #EF4444;
-  --red-dim:          rgba(239,68,68,0.08);
+  --bg-base:          #0A1220;
+  --bg-card:          #0F1B30;
+  --bg-elevated:      #14243E;
+  --bg-hover:         #1B2E4D;
+  --bg-sidebar:       #0A1526;
+  --border:           #1D3050;
+  --border-light:     #2A4066;
+  --border-accent:    rgba(201, 150, 60, 0.32);
+  --gold:             #C9963C;
+  --gold-dim:         #A87B2E;
+  --gold-bright:      #E8C069;
+  --gold-glow:        rgba(201, 150, 60, 0.13);
+  --gold-glow-strong: rgba(201, 150, 60, 0.24);
+  --navy-deep:        #16294A;
+  --navy-panel:       #1B3358;
+  --text-primary:     #F2F5FA;
+  --text-secondary:   #93A5C4;
+  --text-muted:       #566E93;
+  --blue:             #4A7DBF;
+  --blue-dim:         rgba(74,125,191,0.10);
+  --green:            #2E9E6B;
+  --green-dim:        rgba(46,158,107,0.10);
+  --red:              #D64545;
+  --red-dim:          rgba(214,69,69,0.10);
   --radius-xs:        4px;
   --radius-sm:        8px;
   --radius-md:        14px;
   --radius-lg:        20px;
-  --shadow-sm:        0 2px 8px rgba(0,0,0,0.3);
-  --shadow-card:      0 4px 24px rgba(0,0,0,0.45);
-  --shadow-glow:      0 0 40px rgba(234,179,8,0.08);
-  --shadow-btn:       0 4px 16px rgba(234,179,8,0.28);
+  --shadow-sm:        0 2px 8px rgba(2,6,14,0.4);
+  --shadow-card:      0 4px 24px rgba(2,6,14,0.55);
+  --shadow-glow:      0 0 40px rgba(201,150,60,0.07);
+  --shadow-btn:       0 4px 16px rgba(201,150,60,0.30);
   --transition:       all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -70,13 +72,13 @@ i[class*="icon"] {
 }
 
 /* ═══════════════════════════════════════
-   3. App Background
+   3. App Background — deep navy with gold ambient light
 ═══════════════════════════════════════ */
 .stApp {
     background-color: var(--bg-base) !important;
     background-image:
-        radial-gradient(ellipse 70% 40% at 15% 0%,   rgba(234,179,8,0.05)  0%, transparent 60%),
-        radial-gradient(ellipse 50% 30% at 85% 100%, rgba(59,130,246,0.04) 0%, transparent 55%) !important;
+        radial-gradient(ellipse 70% 40% at 15% 0%,   rgba(201,150,60,0.055) 0%, transparent 60%),
+        radial-gradient(ellipse 55% 35% at 85% 100%, rgba(27,51,88,0.35)   0%, transparent 60%) !important;
     min-height: 100vh !important;
 }
 
@@ -120,7 +122,7 @@ i[class*="icon"] {
 /* Headings */
 .stApp h1 {
     font-family: 'Cairo', sans-serif !important;
-    color: var(--gold) !important;
+    color: var(--gold-bright) !important;
     font-weight: 900 !important;
     letter-spacing: -0.5px !important;
 }
@@ -131,12 +133,12 @@ i[class*="icon"] {
 }
 
 /* ═══════════════════════════════════════
-   5. Sidebar — Clean Design (no fixed width — let Streamlit collapse naturally)
+   5. Sidebar — Navy Panel
 ═══════════════════════════════════════ */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #090D1A 0%, #070A14 100%) !important;
+    background: linear-gradient(180deg, #0A1526 0%, #080F1D 100%) !important;
     border-right: 1px solid var(--border) !important;
-    box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 4px 0 30px rgba(2, 6, 14, 0.55) !important;
     direction: ltr !important; /* Keep LTR for correct sidebar placement */
 }
 
@@ -216,7 +218,7 @@ i[class*="icon"] {
     background: var(--bg-card) !important;
     border: 1px solid var(--border) !important;
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important;
-    box-shadow: 3px 0 12px rgba(0,0,0,0.4) !important;
+    box-shadow: 3px 0 12px rgba(2,6,14,0.5) !important;
 }
 
 /* Ensure icon inside toggle renders as font, not text */
@@ -228,13 +230,15 @@ section[data-testid="stSidebar"] ~ div button span {
 }
 
 /* ═══════════════════════════════════════
-   7. Platform Header
+   7. Platform Header — LexTerm brand
 ═══════════════════════════════════════ */
 .header-container {
     display: flex;
     align-items: center;
-    background: linear-gradient(135deg, #0D1B35 0%, #091526 50%, #0E1E38 100%);
-    padding: 28px 36px;
+    background:
+        radial-gradient(ellipse 45% 90% at 8% 50%, rgba(201,150,60,0.10) 0%, transparent 65%),
+        linear-gradient(135deg, #14243E 0%, #0C1830 48%, #16294A 100%);
+    padding: 26px 36px;
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-accent);
     box-shadow: var(--shadow-card), var(--shadow-glow);
@@ -248,16 +252,16 @@ section[data-testid="stSidebar"] ~ div button span {
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 2px;
-    background: linear-gradient(90deg, transparent 0%, var(--gold) 40%, var(--gold-bright) 50%, var(--gold) 60%, transparent 100%);
-    opacity: 0.8;
+    background: linear-gradient(90deg, transparent 0%, var(--gold) 38%, var(--gold-bright) 50%, var(--gold) 62%, transparent 100%);
+    opacity: 0.85;
 }
 
 .header-container::after {
     content: '';
     position: absolute;
-    top: -60px; right: -60px;
-    width: 180px; height: 180px;
-    background: radial-gradient(circle, rgba(234,179,8,0.07) 0%, transparent 70%);
+    top: -70px; right: -70px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(201,150,60,0.09) 0%, transparent 70%);
     pointer-events: none;
 }
 
@@ -268,12 +272,48 @@ section[data-testid="stSidebar"] ~ div button span {
     z-index: 1;
 }
 
+/* Logo tile — white badge so the JPG's white ground reads as design */
+.header-logo {
+    width: 86px;
+    height: 86px;
+    object-fit: contain;
+    background: #FFFFFF;
+    border-radius: 22px;
+    padding: 7px;
+    border: 1.5px solid rgba(201,150,60,0.55);
+    box-shadow: 0 6px 24px rgba(2,6,14,0.5), 0 0 26px rgba(201,150,60,0.22);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+/* Wordmark */
+.lexterm-wordmark {
+    font-family: 'Inter', 'Cairo', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.1;
+}
+.lexterm-wordmark .lex { color: var(--text-primary); }
+.lexterm-wordmark .term { color: var(--gold-bright); }
+
+.lexterm-tagline {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 8px 0 14px;
+    line-height: 1.6;
+    font-family: 'Cairo', sans-serif;
+}
+
 /* ═══════════════════════════════════════
-   8. Buttons
+   8. Buttons — gold on navy
 ═══════════════════════════════════════ */
 .stButton > button, .stDownloadButton > button {
-    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%) !important;
-    color: #060A14 !important;
+    background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 55%, var(--gold-dim) 100%) !important;
+    color: #0A1220 !important;
     font-weight: 700 !important;
     font-family: 'Cairo', sans-serif !important;
     font-size: 14px !important;
@@ -287,7 +327,7 @@ section[data-testid="stSidebar"] ~ div button span {
 
 .stButton > button:hover, .stDownloadButton > button:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 8px 28px rgba(234,179,8,0.45) !important;
+    box-shadow: 0 8px 28px rgba(201,150,60,0.45) !important;
     filter: brightness(1.06) !important;
 }
 
@@ -341,10 +381,10 @@ section[data-testid="stSidebar"] ~ div button span {
 }
 
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dim) 100%) !important;
-    color: #07090F !important;
+    background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 55%, var(--gold-dim) 100%) !important;
+    color: #0A1220 !important;
     font-weight: 800 !important;
-    box-shadow: 0 3px 12px rgba(234,179,8,0.35) !important;
+    box-shadow: 0 3px 12px rgba(201,150,60,0.38) !important;
 }
 
 .stTabs [data-baseweb="tab-panel"] {
@@ -379,23 +419,23 @@ section[data-testid="stSidebar"] ~ div button span {
 
 div[data-testid="stSuccessMessage"] {
     background: var(--green-dim) !important;
-    border-color: rgba(16,185,129,0.3) !important;
-    color: #6EE7B7 !important;
+    border-color: rgba(46,158,107,0.35) !important;
+    color: #7EDCB4 !important;
 }
 div[data-testid="stErrorMessage"] {
     background: var(--red-dim) !important;
-    border-color: rgba(239,68,68,0.3) !important;
-    color: #FCA5A5 !important;
+    border-color: rgba(214,69,69,0.35) !important;
+    color: #F3A8A8 !important;
 }
 div[data-testid="stWarningMessage"] {
-    background: rgba(234,179,8,0.06) !important;
-    border-color: rgba(234,179,8,0.25) !important;
-    color: #FDE047 !important;
+    background: var(--gold-glow) !important;
+    border-color: rgba(201,150,60,0.35) !important;
+    color: var(--gold-bright) !important;
 }
 div[data-testid="stInfoMessage"] {
     background: var(--blue-dim) !important;
-    border-color: rgba(59,130,246,0.25) !important;
-    color: #93C5FD !important;
+    border-color: rgba(74,125,191,0.35) !important;
+    color: #A7C6EC !important;
 }
 
 /* ═══════════════════════════════════════
@@ -466,7 +506,7 @@ div[data-testid="stInfoMessage"] {
     position: absolute;
     left: 0; top: 0; bottom: 0;
     width: 3px;
-    background: linear-gradient(180deg, var(--gold), var(--gold-dim));
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold-dim));
     border-radius: 3px 0 0 3px;
 }
 
@@ -477,7 +517,7 @@ div[data-testid="stInfoMessage"] {
 }
 
 .alignment-index {
-    color: var(--gold);
+    color: var(--gold-bright);
     font-weight: 700;
     font-size: 12px;
     margin-bottom: 6px;
@@ -504,12 +544,12 @@ hr {
 ═══════════════════════════════════════ */
 * {
     scrollbar-width: thin;
-    scrollbar-color: #243350 var(--bg-card);
+    scrollbar-color: #2A4066 var(--bg-card);
 }
 *::-webkit-scrollbar        { width: 7px; height: 7px; }
 *::-webkit-scrollbar-track  { background: var(--bg-card); border-radius: 4px; }
-*::-webkit-scrollbar-thumb  { background: #243350; border-radius: 4px; }
-*::-webkit-scrollbar-thumb:hover { background: #344d6e; }
+*::-webkit-scrollbar-thumb  { background: #2A4066; border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: #3A5580; }
 
 /* ═══════════════════════════════════════
    19. RTL text alignment for Arabic
@@ -538,7 +578,31 @@ hr {
     padding: 16px !important;
 }
 [data-testid="stMetricValue"] {
-    color: var(--gold) !important;
+    color: var(--gold-bright) !important;
     font-weight: 800 !important;
     font-family: 'Cairo', sans-serif !important;
 }
+
+/* ═══════════════════════════════════════
+   22. Footer — LexTerm
+═══════════════════════════════════════ */
+.lexterm-footer {
+    text-align: center;
+    background: linear-gradient(135deg, #0F1B30 0%, #0C1830 100%);
+    padding: 22px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+.lexterm-footer h3 {
+    color: var(--gold-bright) !important;
+    margin-bottom: 10px;
+}
+.lexterm-footer .footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+.lexterm-footer .footer-brand .term { color: var(--gold-bright); }

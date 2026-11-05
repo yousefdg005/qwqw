@@ -59,11 +59,14 @@ def send_to_dictionary(extracted_terms):
     return success_all
 
 # =========================================================
-# 1. إعدادات صفحة Streamlit
+# 1. إعدادات صفحة Streamlit — هوية LexTerm
 # =========================================================
+_ASSETS_DIR = Path(__file__).parent / "assets"
+_LOGO_ICON_PATH = _ASSETS_DIR / "logo_icon.png"
+
 st.set_page_config(
-    page_title="AI Legal Workspace",
-    page_icon="⚖️",
+    page_title="LexTerm — Legal Terminology Workspace",
+    page_icon=str(_LOGO_ICON_PATH) if _LOGO_ICON_PATH.exists() else "🦉",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -81,27 +84,38 @@ def load_css(file_name="style.css"):
 
 load_css("style.css")
 
+# شعار المنصة (LexTerm) بترميز Base64 لتضمينه في الهيدر
+def _asset_b64(name):
+    path = Path(__file__).parent / "assets" / name
+    try:
+        return base64.b64encode(path.read_bytes()).decode()
+    except FileNotFoundError:
+        return ""
+
+LOGO_B64 = _asset_b64("logo.jpg")
+
 # =========================================================
-# 3. الهيدر العام للمنصة (Neutral Branding)
+# 3. الهيدر العام للمنصة (LexTerm Branding)
 # =========================================================
 st.markdown(
-    """
+    f"""
 <div class="header-container" style="direction: ltr; text-align: left;">
+    <img class="header-logo" src="data:image/jpeg;base64,{LOGO_B64}" alt="LexTerm Logo">
     <div class="header-text">
-        <h1 style="color: #EAB308; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.5px;">
-            ⚖️ AI Legal Workspace
+        <h1 class="lexterm-wordmark" style="text-align: center; margin: 0; font-size: 34px;">
+            <span class="lex">Lex</span><span class="term">Term</span>
         </h1>
-        <p style="color: #8B9DC3; font-size: 14px; margin: 10px 0 14px; line-height: 1.6;">
+        <p class="lexterm-tagline" style="text-align: center;">
             Your all-in-one AI toolkit for legal text alignment &amp; term extraction
         </p>
         <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-            <span style="color: #EEF2F8; font-size: 12px; background: rgba(234,179,8,0.12); padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(234,179,8,0.3); font-weight: 600;">
-                🤖 Smart AI Engine
+            <span style="color: #F2F5FA; font-size: 12px; background: rgba(201,150,60,0.13); padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(201,150,60,0.35); font-weight: 600;">
+                🦉 Professional Legal Terminology
             </span>
-            <span style="color: #EEF2F8; font-size: 12px; background: rgba(59,130,246,0.1); padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(59,130,246,0.25); font-weight: 600;">
+            <span style="color: #F2F5FA; font-size: 12px; background: rgba(74,125,191,0.12); padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(74,125,191,0.30); font-weight: 600;">
                 🌐 AR ↔ EN
             </span>
-            <span style="color: #8B9DC3; font-size: 12px; background: rgba(139,157,195,0.08); padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(139,157,195,0.18);">
+            <span style="color: #93A5C4; font-size: 12px; background: rgba(147,165,196,0.08); padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(147,165,196,0.20);">
                 💻 Developed by Youssef Nour Eldin
             </span>
         </div>
@@ -118,9 +132,9 @@ st.sidebar.header("⚙️ إعدادات النظام")
 
 st.sidebar.markdown(
     """
-<div style="background-color: #1E293B; padding: 12px; border-radius: 8px; border: 1px solid #374151; margin-bottom: 15px; text-align: center;">
-    <span style="color: #E5E7EB; font-size: 13px;">ليس لديك مفتاح API؟</span><br>
-    <a href="https://openrouter.ai/keys" target="_blank" style="color: #EAB308; font-weight: bold; text-decoration: none; font-size: 14px; display: inline-block; margin-top: 5px;">
+<div style="background-color: #14243E; padding: 12px; border-radius: 8px; border: 1px solid #2A4066; margin-bottom: 15px; text-align: center;">
+    <span style="color: #F2F5FA; font-size: 13px;">ليس لديك مفتاح API؟</span><br>
+    <a href="https://openrouter.ai/keys" target="_blank" style="color: #E8C069; font-weight: bold; text-decoration: none; font-size: 14px; display: inline-block; margin-top: 5px;">
         🔗 الحصول على المفتاح من OpenRouter
     </a>
 </div>
@@ -283,7 +297,7 @@ def parse_tmx_bytes(tmx_content):
 
 def generate_tmx_file(pairs):
     root=ET.Element("tmx", {"version":"1.4"})
-    ET.SubElement(root,"header", {"creationtool":"AI Legal Workspace","creationtoolversion":"3.0","segtype":"sentence","adminlang":"en-us","srclang":"en","datatype":"plaintext"})
+    ET.SubElement(root,"header", {"creationtool":"LexTerm","creationtoolversion":"3.0","segtype":"sentence","adminlang":"en-us","srclang":"en","datatype":"plaintext"})
     body=ET.SubElement(root,"body")
     for en, ar in pairs:
         tu=ET.SubElement(body,"tu")
@@ -306,44 +320,44 @@ ALIGNMENT_STUDIO_HTML = r"""<!DOCTYPE html>
 <style>
   * { box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; }
-  body { font-family: 'Cairo','Segoe UI',Tahoma,Arial,sans-serif; background:#07090F; color:#EEF2F8; margin:0; padding:10px; overflow:hidden; }
+  body { font-family: 'Cairo','Segoe UI',Tahoma,Arial,sans-serif; background:#0A1220; color:#F2F5FA; margin:0; padding:10px; overflow:hidden; }
   #bar { display:flex; gap:10px; align-items:center; margin-bottom:12px; direction:rtl; flex-wrap:wrap; }
-  #toast { color:#FDE047; font-size:13px; font-weight:600; }
+  #toast { color:#E8C069; font-size:13px; font-weight:600; }
   #alignmentScroll {
     height: 610px; max-height: calc(100vh - 140px); min-height: 240px;
     overflow-y: auto; overflow-x: hidden; padding: 10px;
-    border: 1px solid #1B2840; border-radius: 14px; background: #0D1424;
-    scrollbar-width: thin; scrollbar-color: #243350 #0D1424; overscroll-behavior: contain;
+    border: 1px solid #1D3050; border-radius: 14px; background: #0F1B30;
+    scrollbar-width: thin; scrollbar-color: #2A4066 #0F1B30; overscroll-behavior: contain;
   }
   #alignmentScroll::-webkit-scrollbar { width: 7px; }
-  #alignmentScroll::-webkit-scrollbar-track { background: #0D1424; border-radius: 4px; }
-  #alignmentScroll::-webkit-scrollbar-thumb { background: #243350; border-radius: 4px; }
-  #alignmentScroll::-webkit-scrollbar-thumb:hover { background: #344d6e; }
+  #alignmentScroll::-webkit-scrollbar-track { background: #0F1B30; border-radius: 4px; }
+  #alignmentScroll::-webkit-scrollbar-thumb { background: #2A4066; border-radius: 4px; }
+  #alignmentScroll::-webkit-scrollbar-thumb:hover { background: #3A5580; }
   .alignment-container { display:flex; flex-direction:column; gap:10px; direction:rtl; padding-bottom:14px; }
-  .segment-row { display:flex; gap:10px; background:#0F1D35; border:1px solid #1B2840; border-radius:12px; padding:12px 14px; align-items:center; transition: border-color 0.2s, box-shadow 0.2s; position: relative; }
-  .segment-row::before { content:''; position:absolute; right:0; top:8px; bottom:8px; width:3px; background:linear-gradient(180deg,#EAB308,#CA8A04); border-radius:3px; opacity:0; transition:opacity 0.2s; }
-  .segment-row:hover { border-color:#243350; box-shadow:0 2px 16px rgba(0,0,0,0.35); }
+  .segment-row { display:flex; gap:10px; background:#12233D; border:1px solid #1D3050; border-radius:12px; padding:12px 14px; align-items:center; transition: border-color 0.2s, box-shadow 0.2s; position: relative; }
+  .segment-row::before { content:''; position:absolute; right:0; top:8px; bottom:8px; width:3px; background:linear-gradient(180deg,#C9963C,#A87B2E); border-radius:3px; opacity:0; transition:opacity 0.2s; }
+  .segment-row:hover { border-color:#2A4066; box-shadow:0 2px 16px rgba(2,6,14,0.45); }
   .segment-row:hover::before { opacity:1; }
-  .segment-num { color:#EAB308; font-weight:800; width:42px; text-align:center; font-size:13px; flex-shrink:0; letter-spacing:0.5px; }
+  .segment-num { color:#C9963C; font-weight:800; width:42px; text-align:center; font-size:13px; flex-shrink:0; letter-spacing:0.5px; }
   .cell { flex:1; display:flex; gap:6px; align-items:stretch; min-width:0; border:2px solid transparent; border-radius:8px; transition:border-color 0.18s, background 0.18s; }
-  .cell.drag-over { border:2px dashed #EAB308; background:rgba(234,179,8,0.1); }
+  .cell.drag-over { border:2px dashed #C9963C; background:rgba(201,150,60,0.10); }
   .handle-container { display:flex; flex-direction:column; gap:2px; flex-shrink:0; align-items:center; justify-content:center; }
-  .handle { width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:#111D33; border-radius:5px; color:#4D6080; cursor:grab; user-select:none; font-size:12px; border:1px solid #1B2840; transition:all 0.18s; }
-  .handle:hover { color:#EAB308; border-color:rgba(234,179,8,0.3); background:#182640; }
-  .move-btn { width:22px; height:18px; display:flex; align-items:center; justify-content:center; background:#111D33; border:1px solid #1B2840; border-radius:4px; color:#4D6080; cursor:pointer; font-size:10px; padding:0; transition:all 0.18s; }
-  .move-btn:hover { background:#182640; color:#EAB308; border-color:rgba(234,179,8,0.3); }
-  .card-box { flex:1; min-width:0; background:#111D33; border:1px solid #1B2840; border-radius:8px; padding:10px 14px; min-height:55px; font-size:14px; line-height:1.75; white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; transition:border-color 0.18s, background 0.18s, box-shadow 0.18s; }
-  .card-box:focus { outline:none; border-color:#EAB308; background:#0D1424; box-shadow:0 0 0 3px rgba(234,179,8,0.1); }
-  .en-box { direction:ltr; text-align:left; color:#7DBAFF; }
-  .ar-box { direction:rtl; text-align:right; color:#FDE047; }
+  .handle { width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:#14243E; border-radius:5px; color:#566E93; cursor:grab; user-select:none; font-size:12px; border:1px solid #1D3050; transition:all 0.18s; }
+  .handle:hover { color:#C9963C; border-color:rgba(201,150,60,0.35); background:#1B2E4D; }
+  .move-btn { width:22px; height:18px; display:flex; align-items:center; justify-content:center; background:#14243E; border:1px solid #1D3050; border-radius:4px; color:#566E93; cursor:pointer; font-size:10px; padding:0; transition:all 0.18s; }
+  .move-btn:hover { background:#1B2E4D; color:#C9963C; border-color:rgba(201,150,60,0.35); }
+  .card-box { flex:1; min-width:0; background:#14243E; border:1px solid #1D3050; border-radius:8px; padding:10px 14px; min-height:55px; font-size:14px; line-height:1.75; white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; transition:border-color 0.18s, background 0.18s, box-shadow 0.18s; }
+  .card-box:focus { outline:none; border-color:#C9963C; background:#0F1B30; box-shadow:0 0 0 3px rgba(201,150,60,0.12); }
+  .en-box { direction:ltr; text-align:left; color:#8FBBEA; }
+  .ar-box { direction:rtl; text-align:right; color:#E8C069; }
   .action-btn-group { display:flex; flex-direction:column; gap:5px; flex-shrink:0; }
-  .btn-ctrl { background:#111D33; color:#8B9DC3; border:1px solid #1B2840; border-radius:6px; padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.18s; }
-  .btn-ctrl:hover { background:#182640; color:#EAB308; border-color:rgba(234,179,8,0.3); }
-  .btn-del:hover { background:#3B0A0A; color:#FCA5A5; border-color:rgba(239,68,68,0.3); }
-  .add-row-btn { background:linear-gradient(135deg,#EAB308 0%,#CA8A04 100%); color:#07090F; font-weight:800; border:none; border-radius:8px; padding:10px 20px; cursor:pointer; font-family:inherit; font-size:13px; box-shadow:0 4px 14px rgba(234,179,8,0.28); transition:all 0.2s; }
-  .add-row-btn:hover { transform:translateY(-2px); box-shadow:0 6px 22px rgba(234,179,8,0.4); filter:brightness(1.06); }
-  .undo-btn { background:#111D33; color:#8B9DC3; border:1px solid #1B2840; border-radius:8px; padding:10px 16px; cursor:pointer; font-weight:700; font-family:inherit; font-size:13px; transition:all 0.18s; }
-  .undo-btn:hover { background:#182640; color:#EEF2F8; border-color:#243350; }
+  .btn-ctrl { background:#14243E; color:#93A5C4; border:1px solid #1D3050; border-radius:6px; padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.18s; }
+  .btn-ctrl:hover { background:#1B2E4D; color:#C9963C; border-color:rgba(201,150,60,0.35); }
+  .btn-del:hover { background:#3B0A0A; color:#FCA5A5; border-color:rgba(214,69,69,0.35); }
+  .add-row-btn { background:linear-gradient(135deg,#E8C069 0%,#C9963C 55%,#A87B2E 100%); color:#0A1220; font-weight:800; border:none; border-radius:8px; padding:10px 20px; cursor:pointer; font-family:inherit; font-size:13px; box-shadow:0 4px 14px rgba(201,150,60,0.30); transition:all 0.2s; }
+  .add-row-btn:hover { transform:translateY(-2px); box-shadow:0 6px 22px rgba(201,150,60,0.42); filter:brightness(1.06); }
+  .undo-btn { background:#14243E; color:#93A5C4; border:1px solid #1D3050; border-radius:8px; padding:10px 16px; cursor:pointer; font-weight:700; font-family:inherit; font-size:13px; transition:all 0.18s; }
+  .undo-btn:hover { background:#1B2E4D; color:#F2F5FA; border-color:#2A4066; }
 </style></head>
 <body>
 <div id="bar">
@@ -815,12 +829,12 @@ Correctly rejected here (never output these): "the Second Party shall be liable 
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown(
     """
-<div style="text-align: center; background-color: #131B2E; padding: 20px; border-radius: 12px; border: 1px solid #1E293B;">
-    <h3 style="color: #EAB308; margin-bottom: 10px;">📫 تواصل معي (Contact & Support)</h3>
-    <p style="font-size: 15px; color: #E5E7EB; margin: 5px;"><b>إعداد وتطوير:</b> يوسف نورالدين</p>
-    <p style="font-size: 15px; color: #E5E7EB; margin: 5px;">📱 <b>الهاتف:</b> <a href="tel:0928756918" style="color: #EAB308; text-decoration: none;">0928756918</a> | ✉️ <b>البريد:</b> <a href="mailto:ywsfalmqmz@gmail.com" style="color: #EAB308; text-decoration: none;">ywsfalmqmz@gmail.com</a></p>
-    <hr style="margin: 15px auto; width: 40%; border-top: 1px solid #1E293B;">
-    <p style="font-size: 12px; color: #9CA3AF;">جميع الحقوق محفوظة © المنصة العامة للتحليل والاستخراج القانوني</p>
+<div class="lexterm-footer">
+    <h3 style="text-align: center;">📫 تواصل معي (Contact & Support)</h3>
+    <p style="font-size: 15px; color: #F2F5FA; margin: 5px; text-align: center;"><b>إعداد وتطوير:</b> يوسف نورالدين</p>
+    <p style="font-size: 15px; color: #F2F5FA; margin: 5px; text-align: center;">📱 <b>الهاتف:</b> <a href="tel:0928756918" style="color: #E8C069; text-decoration: none;">0928756918</a> | ✉️ <b>البريد:</b> <a href="mailto:ywsfalmqmz@gmail.com" style="color: #E8C069; text-decoration: none;">ywsfalmqmz@gmail.com</a></p>
+    <hr style="margin: 15px auto; width: 40%; border-top: 1px solid #1D3050;">
+    <p style="font-size: 12px; color: #93A5C4; text-align: center;">جميع الحقوق محفوظة © <span class="footer-brand">Lex<span class="term">Term</span></span> — منصة المصطلحات القانونية الذكية</p>
 </div>
 """,
     unsafe_allow_html=True,
