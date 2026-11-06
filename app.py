@@ -2,6 +2,7 @@ import base64
 import hashlib
 import io
 import json
+import math
 import os
 import re
 import time
@@ -12,6 +13,8 @@ from xml.sax.saxutils import escape as xml_escape
 
 import pandas as pd
 from docx import Document
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 from openai import OpenAI
 import streamlit as st
 import streamlit.components.v1 as components
@@ -37,12 +40,10 @@ def send_to_dictionary(extracted_terms):
         batch = extracted_terms[i:i + batch_size]
         payload = {"terms": batch}
         # إعادة محاولة تلقائية عند سكون السيرفرليس (Neon Serverless Cold Start)
-        batch_success = False
         for attempt in range(2):
             try:
                 response = requests.post(url, json=payload, headers=headers, timeout=60)
                 if response.status_code == 201:
-                    batch_success = True
                     break
                 elif attempt == 0:
                     time.sleep(2)
@@ -150,6 +151,7 @@ api_key = st.sidebar.text_input(
 )
 
 PAID_MODELS_MAPPING = {
+    "⚡ Gemini 2.5 Flash": "google/gemini-2.5-flash",
     "⚡ Gemini 3.8 Flash": "google/gemini-3.8-flash",
     "⚖️ GPT-4o Mini": "openai/gpt-4o-mini",
     "🦙 Llama 4 Maverick": "meta-llama/llama-4-maverick",
@@ -186,19 +188,36 @@ if "alignment_draft" not in st.session_state:
 # =========================================================
 _INVISIBLE_RE = re.compile(r"[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]")
 _XML_BAD_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+_AR_DIACRITICS_RE = re.compile(r"[\u0640\u064b-\u065f\u0670\u06d6-\u06ed]")
 
 def normalize_text(text):
-    text = unicodedata.normalize("NFKC", text)
+    text = unicodedata.normalize("NFKC", str(text or ""))
     text = _INVISIBLE_RE.sub("", text)
     return text.replace("\u00a0", " ")
 
-_EN_STOP = set("a an the and or but if then of to in on at by for from with without under over into upon is are was were be been being it this that these those as not no any all each such may shall will must can could should has have had do does did".split())
-_AR_STOP = set("في من على إلى عن أن إن أو و ثم كما حيث هذا هذه ذلك التي الذي الذين اللذين كان تكون يكون يتم قد ما لا لم لن مع بين عند لدى كل أي بعض وفق بموجب بناء بعد قبل حيث إذا".split())
+_EN_STOP = set("a an the and or but if then of to in on at by for from with without under over into upon is are was were be been being it its this that these those as not no any all each such may shall will must can could should has have had do does did hereby thereof therein hereof whereof whereas".split())
+_AR_STOP = set("في من على إلى عن أن إن أو و ثم كما حيث هذا هذه ذلك تلك التي الذي الذين اللذين اللتان كان كانت تكون يكون يتم قد ما لا لم لن مع بين عند لدى كل أي بعض وفق بموجب بناء بعد قبل حيث إذا إلا غير دون نحو ضد خلال عبر حول".split())
+
+def _strip_ar_diacritics(text):
+    return _AR_DIACRITICS_RE.sub("", str(text or ""))
 
 def _term_key(value):
     value = normalize_text(str(value or "")).casefold()
+    # إزالة التشكيل والمد (التطويل) قبل استبدال غير الحروف بمسافات حتى لا تنقسم الكلمات العربية
+    value = _strip_ar_diacritics(value)
+    # توحيد المتغيرات الإملائية العربية الشائعة لمنع التكرار
+    value = re.sub(r"[أإآٱ]", "ا", value)
+    value = re.sub(r"ى(?=\s|$|\W)", "ي", value)
+    value = re.sub(r"ة(?=\s|$|\W)", "ه", value)
     value = re.sub(r"[\W_]+", " ", value, flags=re.UNICODE)
-    return re.sub(r"\s+", " ", value).strip()
+    words = value.split()
+    norm_words = [w[2:] if re.match(r"^ال[\u0600-\u06ff]{2,}", w) else w for w in words]
+    return " ".join(norm_words).strip()
+
+_DIGIT_TRANS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+
+def _extract_numbers(text):
+    return set(re.findall(r"\d+", str(text or "").translate(_DIGIT_TRANS)))
 
 def align_segments(en_segments, ar_segments):
     n, m = len(en_segments), len(ar_segments)
@@ -208,15 +227,26 @@ def align_segments(en_segments, ar_segments):
                 for i in range(count)]
     inf = float("inf")
     dp = [[inf] * (m + 1) for _ in range(n + 1)]
-    prev = [[None] * (m + 1) for _ in range(n + 1)]
+    prev: list[list[tuple[int, int, int, int] | None]] = [[None] * (m + 1) for _ in range(n + 1)]
     dp[0][0] = 0.0
     for i in range(n + 1):
         for j in range(m + 1):
             if dp[i][j] == inf: continue
-            for a, b in ((1,1),(1,2),(2,1)):
+            for a, b in ((1,1),(1,2),(2,1),(1,3),(3,1)):
                 if i+a > n or j+b > m: continue
-                le = sum(len(x) for x in en_segments[i:i+a]); la = sum(len(x) for x in ar_segments[j:j+b])
-                cost = abs(__import__('math').log((le+1)/(la+1))) * 0.10 + (a+b-2)*0.18
+                en_chunk = " ".join(en_segments[i:i+a])
+                ar_chunk = " ".join(ar_segments[j:j+b])
+                le = len(en_chunk)
+                # النص القانوني الإنجليزي أطول بنحو 22% في عدد الحروف من المقابل العربي
+                la_scaled = len(ar_chunk) * 1.22
+                cost = abs(math.log((le+1)/(la_scaled+1))) * 0.12 + (a+b-2)*0.18
+                nums_en = _extract_numbers(en_chunk)
+                nums_ar = _extract_numbers(ar_chunk)
+                if nums_en or nums_ar:
+                    if nums_en == nums_ar:
+                        cost = max(0.0, cost - 0.08)
+                    elif not (nums_en & nums_ar):
+                        cost += 0.10
                 if dp[i][j] + cost < dp[i+a][j+b]:
                     dp[i+a][j+b] = dp[i][j] + cost; prev[i+a][j+b] = (i,j,a,b)
     if prev[n][m] is None:
@@ -230,30 +260,77 @@ def align_segments(en_segments, ar_segments):
         i,j=pi,pj
     return list(reversed(groups))
 
-def _is_low_value_term(term):
-    key = _term_key(term)
-    if not key: return True
-    words = key.split()
-    if len(words) == 1 and (key in _EN_STOP or key in _AR_STOP): return True
-    if len(words) == 1 and len(key) < 4 and not re.search(r"[\u0600-\u06ff]", key): return True
+def _is_low_value_term(en_term, ar_term=None):
+    en_clean = _strip_ar_diacritics(normalize_text(str(en_term or ""))).strip()
+    if not en_clean:
+        return True
+    en_key = re.sub(r"[\W_]+", " ", en_clean.casefold(), flags=re.UNICODE).strip()
+    if not en_key:
+        return True
+    en_words = en_key.split()
+    if len(en_words) > 7:
+        return True
+    if all(w in _EN_STOP or w.isdigit() for w in en_words):
+        return True
+    # السماح بالمصطلحات القانونية الثلاثية الصحيحة (مثل law, act, tax, fee, bar, res, lex) ورفض الرموز المفردة الأقل من حرفين
+    if len(en_words) == 1 and len(en_key) < 2:
+        return True
+    if ar_term is not None:
+        ar_clean = _strip_ar_diacritics(normalize_text(str(ar_term or ""))).strip()
+        if not ar_clean:
+            return True
+        ar_key = re.sub(r"[\W_]+", " ", ar_clean.casefold(), flags=re.UNICODE).strip()
+        if not ar_key:
+            return True
+        ar_words = ar_key.split()
+        if len(ar_words) > 7:
+            return True
+        if all(w in _AR_STOP or w.isdigit() for w in ar_words):
+            return True
+        if len(ar_words) == 1 and len(ar_key) < 2:
+            return True
     return False
+
+def _is_grounded_in_unit(en_term, ar_term, en_source, ar_source):
+    en_src = normalize_text(en_source).casefold()
+    ar_src = _term_key(ar_source)
+    en_tokens = [w for w in re.findall(r"[a-zA-Z]{3,}", str(en_term or "").casefold()) if w not in _EN_STOP]
+    if en_tokens and not any(w[:4] in en_src for w in en_tokens):
+        return False
+    ar_tokens = [w for w in _term_key(ar_term).split() if w not in _AR_STOP and len(w) >= 2]
+    return not (ar_tokens and not any(w[:2] in ar_src for w in ar_tokens))
 
 def extract_text_from_docx_bytes(data):
     notes = []
     try:
         doc = Document(io.BytesIO(data))
         paragraphs = []
-        for p in doc.paragraphs:
-            txt = p.text.strip()
-            if txt:
-                paragraphs.append(normalize_text(txt))
-        if doc.tables:
-            for table in doc.tables:
+        table_count = 0
+        # قراءة الفقرات والجداول بترتيب ورودها الفعلي داخل المستند مع منع تكرار الخلايا المدمجة
+        for child in doc.element.body.iterchildren():
+            tag = child.tag.split("}")[-1]
+            if tag == "p":
+                p = Paragraph(child, doc)
+                txt = p.text.strip()
+                if txt:
+                    paragraphs.append(normalize_text(txt))
+            elif tag == "tbl":
+                table_count += 1
+                table = Table(child, doc)
                 for row in table.rows:
-                    row_cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                    seen_tc = set()
+                    row_cells = []
+                    for cell in row.cells:
+                        if id(cell._tc) in seen_tc:
+                            continue
+                        seen_tc.add(id(cell._tc))
+                        cell_txt = " ".join(line.strip() for line in cell.text.splitlines() if line.strip())
+                        if cell_txt:
+                            row_cells.append(cell_txt)
                     if row_cells:
                         paragraphs.append(normalize_text(" | ".join(row_cells)))
-            notes.append(f"تم استخراج المحتوى من {len(doc.tables)} جدول/جداول داخل المستند")
+        if table_count:
+            notes.append(f"تم استخراج المحتوى من {table_count} جدول/جداول بترتيبها الأصلي داخل المستند")
         return "\n\n".join(paragraphs), notes
     except Exception as e:
         return "", [f"خطأ أثناء قراءة ملف Word: {e}"]
@@ -262,15 +339,23 @@ def process_docx_text_to_segments(text):
     if not text: return []
     text = normalize_text(text)
     segments = []
-    abbreviations = ("Mr.", "Mrs.", "Ms.", "Dr.", "Jr.", "Sr.", "Inc.", "Ltd.", "No.", "e.g.", "i.e.", "Art.", "Sec.")
+    abbreviations = (
+        "Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "Jr.", "Sr.", "Inc.", "Ltd.", "Co.", "Corp.",
+        "L.L.C.", "LLC.", "Plc.", "No.", "Nos.", "Art.", "Arts.", "Sec.", "Secs.", "Para.",
+        "Paras.", "Cl.", "Ch.", "Pt.", "Vol.", "Ref.", "Ex.", "Sched.", "App.", "vs.", "v.",
+        "e.g.", "i.e.", "et al.", "et seq.", "etc.", "U.S.", "U.K.", "U.N.", "E.U.",
+        "م.", "ص.", "ج.", "ط.", "فقرة.", "بند.", "ش.م.م.", "ذ.م.م."
+    )
     for paragraph in re.split(r"\n+", text):
         paragraph = re.sub(r"\s+", " ", paragraph).strip()
         if not paragraph: continue
-        protected = paragraph
+        protected = re.sub(r"^(\d+(?:\.\d+)*)\.", r"\1<NUMDOT>", paragraph)
         for idx, abbr in enumerate(abbreviations):
-            protected = re.sub(re.escape(abbr), f"{abbr[:-1]}<ABBR{idx}>", protected, flags=re.I)
-        parts = re.split(r"(?<=[.!?؟؛])\s+", protected)
+            protected = re.sub(r"(?<!\w)" + re.escape(abbr), f"{abbr[:-1]}<ABBR{idx}>", protected, flags=re.IGNORECASE)
+        # التقسيم على علامات نهاية الجملة فقط (. ! ? ؟) لتجنب اختلال التطابق عند وجود فاصلة منقوطة في لغة دون الأخرى
+        parts = re.split(r"(?<=[.!?؟])\s+", protected)
         for part in parts:
+            part = part.replace("<NUMDOT>", ".")
             part = re.sub(r"<ABBR(\d+)>", lambda m: abbreviations[int(m.group(1))][-1], part)
             part = re.sub(r"\s+", " ", part).strip()
             if part: segments.append(part)
@@ -654,10 +739,10 @@ A candidate is a term only if it passes all five tests:
 4. Specialisation, judged by meaning and not by appearance: accept (a) words exclusive to law and (b) ordinary words used here in a specific legal sense (notice, default, performance, consideration). Reject a word only when it is used in its ordinary sense in this unit (building, market, payment date, head office).
 5. Alignment: the English term and the Arabic term both occur in the same <tu>, and the Arabic is a genuine rendering of that concept, not a paraphrase of the sentence or a loosely related word. Use the Arabic wording found in the unit even if you prefer another. If you cannot point to the Arabic words in that unit with confidence, skip the term.
 
-Form: English = noun or noun phrase of 1–6 words with a nominal head. Arabic = 1–6 words: a noun, an idafa, or noun + adjective. Fixed legal expressions (null and void, bona fide, mutatis mutandis, force majeure) are allowed even if not nominal. They are phrases rather than concepts, so test 2 is relaxed for them: their definition explains their meaning and legal effect.
+Form: English = noun or noun phrase of 1–6 words with a nominal head. Arabic = 1–6 words: a noun, an idafa, or noun + adjective. Fixed legal expressions and canonical legal modifiers (null and void, voidable, jointly and severally, bona fide, mutatis mutandis, force majeure, prima facie, ultra vires, ex parte, in rem) are allowed even if not nominal. They are phrases/modifiers rather than pure nouns, so test 2 is relaxed for them: their definition explains their meaning and legal effect.
 
 AUTOMATIC REJECTIONS
-- clauses, sentences, finite verbs, modals, bare verbs, verb phrases, bare adjectives or adverbs (e.g. "rescind the sale", "terminate");
+- clauses, sentences, finite verbs, modals, bare verbs, verb phrases, or ordinary non-legal adjectives/adverbs (e.g. "rescind the sale", "terminate");
 - boilerplate and preamble formulas (pursuant to, subject to, in the event of, failing which, notwithstanding, بناءً على, بعد الاطلاع على, في حالة);
 - dates, numbers, amounts, durations, percentages, and law, decision or article references;
 - proper names of persons, companies, places or specific documents;
@@ -667,8 +752,10 @@ AUTOMATIC REJECTIONS
 NORMALISATION
 English: lemma form; remove leading articles, determiners and possessives; singular unless the plural is the lexicalised form (damages, proceeds); lowercase unless a proper-noun part of a fixed term. Do not change part of speech.
 Arabic:
-- Write the headword in indefinite lemma form: drop the initial definite article (القوة القاهرة → قوة قاهرة, الإهمال → إهمال) but keep internal ال inside an idafa (حق الانتفاع).
-- Remove an attached conjunction or preposition (و ف ب ل ك) only if the letter is not part of the word's root. Keep: بطلان، فسخ، كفالة، وكالة، وصية، وقف، وعد، لائحة. Remove: بإخطار → إخطار، للمؤجر → مؤجر.
+- Write the headword in indefinite lemma form:
+  (a) For a single noun or Noun + Adjective (موصوف + صفة), drop ال from ALL words (القوة القاهرة → قوة قاهرة, الإخطار الكتابي → إخطار كتابي, الخطأ الجسيم → خطأ جسيم, الإهمال → إهمال).
+  (b) For an Idafa construction (مضاف + مضاف إليه), drop ال from the first noun ONLY and keep internal ال on the second noun (حق الانتفاع → حق الانتفاع, فسخ الإيجار → فسخ الإيجار, عبء الإثبات → عبء الإثبات). Never produce a hybrid where an adjective keeps ال while its noun is indefinite.
+- Remove an attached conjunction or preposition (و ف ب ل ك) only if the letter is not part of the word's root. Keep: بطلان، فسخ، كفالة، وكالة، وصية، وقف، وعد، لائحة. Remove: بإخطار → إخطار، للمؤجر → مؤجر، وللبائع → بائع.
 - No diacritics, no tatweel.
 General:
 - List each (en, ar) pair once. If one English term has genuinely different Arabic renderings in different units, output each pair once.
@@ -731,27 +818,66 @@ Correct output:
                 def _s(item, key, default=""):
                     return str(item.get(key) or default).strip()
 
-                MAX_CHARS = 8000 
+                MAX_CHARS = 8000
+                BATCH_SIZE = 8
 
-                for i, (en_text, ar_text) in enumerate(aligned_units):
-                    status_text.text(
-                        f"جاري تحليل الوحدة ({i+1}/{len(aligned_units)})... عبر نموذج `{selected_model_id}`"
-                    )
-
+                # تجميع الوحدات في دفعات XML بصيغة <tu id="..."> المتوافقة مع هندسة الأمر
+                batches = []
+                current_batch = []
+                current_chars = 0
+                for idx, (en_text, ar_text) in enumerate(aligned_units, start=1):
                     en_send = en_text[:MAX_CHARS // 2] if len(en_text) > MAX_CHARS // 2 else en_text
                     ar_send = ar_text[:MAX_CHARS // 2] if len(ar_text) > MAX_CHARS // 2 else ar_text
-                    user_prompt = f"[EN]: {en_send}\n[AR]: {ar_send}"
+                    unit_len = len(en_send) + len(ar_send)
+                    if current_batch and (len(current_batch) >= BATCH_SIZE or current_chars + unit_len > MAX_CHARS):
+                        batches.append(current_batch)
+                        current_batch = []
+                        current_chars = 0
+                    current_batch.append((str(idx), en_text, ar_text, en_send, ar_send))
+                    current_chars += unit_len
+                if current_batch:
+                    batches.append(current_batch)
+
+                active_model_id = selected_model_id
+
+                for b_idx, batch in enumerate(batches):
+                    status_text.text(
+                        f"جاري تحليل الدفعة ({b_idx+1}/{len(batches)}) — الوحدات {batch[0][0]} إلى {batch[-1][0]} عبر نموذج `{active_model_id}`"
+                    )
+
+                    unit_map = {uid: (en_full, ar_full) for uid, en_full, ar_full, _, _ in batch}
+                    default_en, default_ar = batch[0][1], batch[0][2]
+                    user_prompt = "\n".join(
+                        f'<tu id="{uid}"><en>{xml_escape(en_s)}</en><ar>{xml_escape(ar_s)}</ar></tu>'
+                        for uid, _, _, en_s, ar_s in batch
+                    )
 
                     try:
-                        response = client.chat.completions.create(
-                            model=selected_model_id,
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": user_prompt},
-                            ],
-                            temperature=0.0,
-                            response_format={"type": "json_object"},
-                        )
+                        try:
+                            response = client.chat.completions.create(
+                                model=active_model_id,
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_prompt},
+                                ],
+                                temperature=0.0,
+                                response_format={"type": "json_object"},
+                            )
+                        except Exception as model_err:
+                            # في حال كان معرّف النموذج غير متاح في OpenRouter يتم التحويل تلقائياً إلى Gemini 2.5 Flash
+                            if active_model_id == "google/gemini-3.8-flash" and ("404" in str(model_err) or "400" in str(model_err) or "not found" in str(model_err).lower() or "invalid" in str(model_err).lower()):
+                                active_model_id = "google/gemini-2.5-flash"
+                                response = client.chat.completions.create(
+                                    model=active_model_id,
+                                    messages=[
+                                        {"role": "system", "content": system_prompt},
+                                        {"role": "user", "content": user_prompt},
+                                    ],
+                                    temperature=0.0,
+                                    response_format={"type": "json_object"},
+                                )
+                            else:
+                                raise
 
                         raw_text = response.choices[0].message.content or ""
                         # حماية إضافية: إزالة أي محيط Markdown قد يضيفه النموذج رغم التعليمات الصارمة
@@ -764,56 +890,62 @@ Correct output:
 
                         if terms and isinstance(terms, list):
                             for item in terms:
-                                if isinstance(item, dict) and item.get("en") and not _is_low_value_term(item.get("en")):
-                                    results.append({
-                                        "en": _s(item, "en"),
-                                        "ar": _s(item, "ar"),
-                                        "Definition": _s(item, "definition"),
-                                        "Subject field": _s(item, "subject field", "قانون عام"),
-                                        "en Source text": en_text,
-                                        "ar Source text": ar_text,
-                                    })
+                                if not isinstance(item, dict):
+                                    continue
+                                en_val = _s(item, "en")
+                                ar_val = _strip_ar_diacritics(_s(item, "ar"))
+                                if _is_low_value_term(en_val, ar_val):
+                                    continue
+                                tu_id = _s(item, "tu_id")
+                                src_en, src_ar = unit_map.get(tu_id, (default_en, default_ar))
+                                # إذا لم يطابق tu_id، ابحث في وحدات الدفعة عن الوحدة التي تحتوي المصطلح فعلياً
+                                if tu_id not in unit_map:
+                                    for _, cand_en, cand_ar, _, _ in batch:
+                                        if _is_grounded_in_unit(en_val, ar_val, cand_en, cand_ar):
+                                            src_en, src_ar = cand_en, cand_ar
+                                            break
+                                if not _is_grounded_in_unit(en_val, ar_val, src_en, src_ar):
+                                    continue
+                                subj = _s(item, "subject_field") or _s(item, "subject field") or "General Legal Terms"
+                                conf = _s(item, "confidence", "high").lower()
+                                if conf not in ("high", "medium"):
+                                    continue
+                                results.append({
+                                    "en": en_val,
+                                    "ar": ar_val,
+                                    "Definition": _s(item, "definition"),
+                                    "Subject field": subj,
+                                    "Confidence": conf,
+                                    "en Source text": src_en,
+                                    "ar Source text": src_ar,
+                                })
                     except Exception as e:
-                        st.warning(f"تنبيه في الوحدة {i+1}: {e}")
+                        st.warning(f"تنبيه في الدفعة {b_idx+1}: {e}")
 
-                    progress_bar.progress((i + 1) / len(aligned_units))
+                    progress_bar.progress((b_idx + 1) / len(batches))
 
                 status_text.text("✅ اكتمل الاستخراج والتصفية بنجاح!")
 
                 if results:
                     df = pd.DataFrame(results)
+                    # ترتيب النتائج بحيث تُقدَّم المصطلحات ذات الثقة العالية والتعريفات الأكمل عند إزالة التكرار
+                    df["_conf_rank"] = df["Confidence"].map(lambda c: 0 if c == "high" else 1)
+                    df["_def_len"] = df["Definition"].str.len().fillna(0)
+                    df = df.sort_values(by=["_conf_rank", "_def_len"], ascending=[True, False], kind="mergesort")
                     df["_key"] = df["en"].map(_term_key) + "|" + df["ar"].map(_term_key)
-                    df = df.groupby("_key", as_index=False, sort=False).agg({
-                        "en":"first", "ar":"first", "Definition":"first", "Subject field":"first",
-                        "en Source text":lambda x: "\n---\n".join(dict.fromkeys(x)),
-                        "ar Source text":lambda x: "\n---\n".join(dict.fromkeys(x)),
-                    })
-
-                    df.drop(columns=["_key"], inplace=True)
+                    df = pd.DataFrame(df.groupby("_key", as_index=False, sort=False).agg({
+                        "en": "first",
+                        "ar": "first",
+                        "Definition": "first",
+                        "Subject field": "first",
+                        "Confidence": "first",
+                        "en Source text": lambda x: "\n---\n".join(dict.fromkeys(x)),
+                        "ar Source text": lambda x: "\n---\n".join(dict.fromkeys(x)),
+                    })).drop(columns=["_key"])
                     # ترقيم تسلسلي للمصطلحات (1..N) بعد إزالة التكرار
-                    df["ID"] = range(1, len(df) + 1)
-                    df = df[["ID", "en", "ar", "Definition", "Subject field", "en Source text", "ar Source text"]]
+                    df["ID"] = list(range(1, len(df) + 1))
+                    df = df[["ID", "en", "ar", "Definition", "Subject field", "Confidence", "en Source text", "ar Source text"]]
                     st.session_state["results_df"] = df
-
-                    # تجهيز الإرسال إلى القاموس: بدون عمود ID لأن القاموس لديه نظام ترقيم خاص به
-                    # إرسال العمودين الجديدين (source text ar و source text en) بالصيغتين (بالمسافة والشرطة السفلية) لضمان التوافق التام مع واجهة القاموس
-                    terms_to_send = [
-                        {
-                            "en": str(row.get("en", "")).strip(),
-                            "ar": str(row.get("ar", "")).strip(),
-                            "definition": str(row.get("Definition", "") or row.get("definition", "")).strip(),
-                            "subject field": str(row.get("Subject field", "") or row.get("subject field", "")).strip(),
-                            "source_text_en": str(row.get("en Source text", "") or row.get("source text en", "") or row.get("source_text_en", "")).strip(),
-                            "source_text_ar": str(row.get("ar Source text", "") or row.get("source text ar", "") or row.get("source_text_ar", "")).strip(),
-                            "source text en": str(row.get("en Source text", "") or row.get("source text en", "") or row.get("source_text_en", "")).strip(),
-                            "source text ar": str(row.get("ar Source text", "") or row.get("source text ar", "") or row.get("source_text_ar", "")).strip(),
-                        }
-                        for _, row in df.iterrows() if row.get("en")
-                    ]
-
-                    if terms_to_send and send_to_dictionary(terms_to_send):
-                        st.success("🚀 تم إرسال المصطلحات المستخرجة بنجاح إلى القاموس!")
-
                 else:
                     st.error("لم يتم العثور على مصطلحات موضوعية بعد التصفية.")
                     
@@ -821,7 +953,7 @@ Correct output:
     if st.session_state["results_df"] is not None:
         df_res = st.session_state["results_df"]
 
-        st.subheader("📊 جدول المصطلحات المستخرجة:")
+        st.subheader("📊 جدول المصطلحات المستخرجة (راجع وعدّل قبل التصدير أو الإرسال للقاموس):")
         edited_df = st.data_editor(
             df_res, use_container_width=True, hide_index=True, num_rows="dynamic",
             key="terms_editor",
@@ -829,11 +961,29 @@ Correct output:
         st.session_state["results_df"] = edited_df
         df_res = edited_df
 
+        if st.button("🚀 اعتماد وإرسال المصطلحات المراجَعة إلى القاموس", use_container_width=True):
+            terms_to_send = [
+                {
+                    "en": str(row.get("en", "")).strip(),
+                    "ar": str(row.get("ar", "")).strip(),
+                    "definition": str(row.get("Definition", "") or row.get("definition", "")).strip(),
+                    "subject field": str(row.get("Subject field", "") or row.get("subject field", "")).strip(),
+                    "source_text_en": str(row.get("en Source text", "") or row.get("source text en", "") or row.get("source_text_en", "")).strip(),
+                    "source_text_ar": str(row.get("ar Source text", "") or row.get("source text ar", "") or row.get("source_text_ar", "")).strip(),
+                    "source text en": str(row.get("en Source text", "") or row.get("source text en", "") or row.get("source_text_en", "")).strip(),
+                    "source text ar": str(row.get("ar Source text", "") or row.get("source text ar", "") or row.get("source_text_ar", "")).strip(),
+                }
+                for _, row in df_res.iterrows() if str(row.get("en", "")).strip() and str(row.get("ar", "")).strip()
+            ]
+            if terms_to_send and send_to_dictionary(terms_to_send):
+                st.success("🚀 تم إرسال المصطلحات المعتمدة بنجاح إلى القاموس!")
+
         # تجهيز التصدير بجميع الأعمدة المطلوبة (Excel وCSV فقط — بدون PDF أو Word)
         export_df = df_res.copy()
         # إعادة الترقيم التسلسلي للمصطلحات في ملفات التحميل حتى بعد أي تعديل أو حذف بالجدول
         export_df["ID"] = range(1, len(export_df) + 1)
-        export_df = export_df[["ID", "en", "ar", "Definition", "Subject field", "en Source text", "ar Source text"]]
+        cols = [c for c in ["ID", "en", "ar", "Definition", "Subject field", "Confidence", "en Source text", "ar Source text"] if c in export_df.columns]
+        export_df = export_df[cols]
 
         excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
