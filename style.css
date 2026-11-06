@@ -25,8 +25,8 @@
   --navy-deep:        #16294A;
   --navy-panel:       #1B3358;
   --text-primary:     #F2F5FA;
-  --text-secondary:   #93A5C4;
-  --text-muted:       #566E93;
+  --text-secondary:   #B0C0DA;
+  --text-muted:       #7E95B8;
   --blue:             #4A7DBF;
   --blue-dim:         rgba(74,125,191,0.10);
   --green:            #2E9E6B;
@@ -95,6 +95,10 @@ i[class*="icon"] {
     direction: ltr !important;
 }
 
+[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
 /* Main content block — fill all available width */
 [data-testid="stMain"] .block-container {
     max-width: 100% !important;
@@ -120,14 +124,14 @@ i[class*="icon"] {
 }
 
 /* Headings */
-.stApp h1 {
-    font-family: 'Cairo', sans-serif !important;
+.stApp h1:not(.lexterm-wordmark) {
+    font-family: 'Cairo', 'Inter', sans-serif !important;
     color: var(--gold-bright) !important;
-    font-weight: 900 !important;
-    letter-spacing: -0.5px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.3px !important;
 }
 .stApp h2, .stApp h3, .stApp h4 {
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Cairo', 'Inter', sans-serif !important;
     color: var(--text-primary) !important;
     font-weight: 700 !important;
 }
@@ -289,33 +293,36 @@ section[data-testid="stSidebar"] ~ div button span {
 
 /* Wordmark */
 .lexterm-wordmark {
-    font-family: 'Inter', 'Cairo', sans-serif;
-    font-size: 34px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    color: var(--text-primary);
-    margin: 0;
-    line-height: 1.1;
+    font-family: 'Inter', 'Cairo', sans-serif !important;
+    font-size: 34px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
+    color: var(--text-primary) !important;
+    margin: 0 !important;
+    line-height: 1.1 !important;
 }
-.lexterm-wordmark .lex { color: var(--text-primary); }
-.lexterm-wordmark .term { color: var(--gold-bright); }
+.lexterm-wordmark .lex { color: var(--text-primary) !important; }
+.lexterm-wordmark .term { color: var(--gold-bright) !important; }
 
 .lexterm-tagline {
-    color: var(--text-secondary);
-    font-size: 14px;
-    margin: 8px 0 14px;
-    line-height: 1.6;
-    font-family: 'Cairo', sans-serif;
+    color: var(--text-secondary) !important;
+    font-size: 14px !important;
+    margin: 8px 0 14px !important;
+    line-height: 1.6 !important;
+    font-family: 'Inter', 'Cairo', sans-serif !important;
+    text-align: center !important;
 }
 
 /* ═══════════════════════════════════════
    8. Buttons — gold on navy
 ═══════════════════════════════════════ */
-.stButton > button, .stDownloadButton > button {
+.stButton > button,
+.stDownloadButton > button,
+[data-testid="stLinkButton"] > a {
     background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 55%, var(--gold-dim) 100%) !important;
     color: #0A1220 !important;
     font-weight: 700 !important;
-    font-family: 'Cairo', sans-serif !important;
+    font-family: 'Cairo', 'Inter', sans-serif !important;
     font-size: 14px !important;
     border-radius: var(--radius-sm) !important;
     border: none !important;
@@ -323,15 +330,21 @@ section[data-testid="stSidebar"] ~ div button span {
     box-shadow: var(--shadow-btn) !important;
     transition: var(--transition) !important;
     overflow: hidden !important;
+    text-decoration: none !important;
 }
 
-.stButton > button:hover, .stDownloadButton > button:hover {
+.stButton > button:hover,
+.stDownloadButton > button:hover,
+[data-testid="stLinkButton"] > a:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 8px 28px rgba(201,150,60,0.45) !important;
     filter: brightness(1.06) !important;
+    color: #0A1220 !important;
 }
 
-.stButton > button:active, .stDownloadButton > button:active {
+.stButton > button:active,
+.stDownloadButton > button:active,
+[data-testid="stLinkButton"] > a:active {
     transform: translateY(0px) scale(0.99) !important;
 }
 
@@ -342,12 +355,27 @@ section[data-testid="stSidebar"] ~ div button span {
     background: var(--bg-card) !important;
     border: 2px dashed var(--border-light) !important;
     border-radius: var(--radius-md) !important;
+    color: var(--text-secondary) !important;
     transition: var(--transition) !important;
 }
 
 [data-testid="stFileUploadDropzone"]:hover {
     border-color: var(--gold) !important;
     background: var(--gold-glow) !important;
+}
+
+[data-testid="stFileUploadDropzone"] button {
+    background: var(--bg-elevated) !important;
+    color: var(--gold-bright) !important;
+    border: 1px solid var(--border-accent) !important;
+    border-radius: var(--radius-sm) !important;
+    font-family: 'Cairo', 'Inter', sans-serif !important;
+    font-weight: 600 !important;
+}
+
+[data-testid="stFileUploadDropzone"] button:hover {
+    background: var(--bg-hover) !important;
+    border-color: var(--gold) !important;
 }
 
 /* ═══════════════════════════════════════
@@ -366,8 +394,8 @@ section[data-testid="stSidebar"] ~ div button span {
 .stTabs [data-baseweb="tab"] {
     background: transparent !important;
     border-radius: var(--radius-sm) !important;
-    color: var(--text-muted) !important;
-    font-family: 'Cairo', sans-serif !important;
+    color: var(--text-secondary) !important;
+    font-family: 'Cairo', 'Inter', sans-serif !important;
     font-weight: 600 !important;
     font-size: 14px !important;
     transition: var(--transition) !important;
@@ -462,11 +490,25 @@ div[data-testid="stInfoMessage"] {
     border-color: var(--gold) !important;
     box-shadow: 0 0 0 3px var(--gold-glow) !important;
 }
-[data-baseweb="popover"] {
+[data-baseweb="popover"],
+[data-baseweb="menu"],
+[data-baseweb="popover"] ul {
     background: var(--bg-elevated) !important;
     border: 1px solid var(--border-light) !important;
     border-radius: var(--radius-md) !important;
     box-shadow: var(--shadow-card) !important;
+    color: var(--text-primary) !important;
+}
+[data-baseweb="menu"] li,
+[role="option"] {
+    color: var(--text-primary) !important;
+    font-family: 'Cairo', 'Inter', sans-serif !important;
+}
+[data-baseweb="menu"] li:hover,
+[role="option"]:hover,
+[role="option"][aria-selected="true"] {
+    background: var(--bg-hover) !important;
+    color: var(--gold-bright) !important;
 }
 
 /* ═══════════════════════════════════════
@@ -552,11 +594,12 @@ hr {
 *::-webkit-scrollbar-thumb:hover { background: #3A5580; }
 
 /* ═══════════════════════════════════════
-   19. RTL text alignment for Arabic
+   19. BiDi-aware text alignment for Arabic & English
 ═══════════════════════════════════════ */
-.stApp p, .stApp h1, .stApp h2, .stApp h3,
+.stApp p, .stApp h1:not(.lexterm-wordmark), .stApp h2, .stApp h3,
 .stApp h4, .stApp h5, .stApp label {
-    text-align: right;
+    unicode-bidi: plaintext;
+    text-align: start;
 }
 
 /* ═══════════════════════════════════════

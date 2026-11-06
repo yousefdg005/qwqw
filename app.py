@@ -402,10 +402,13 @@ tab1, tab2 = st.tabs(["Alignment Studio (beta)", "AI Term Extractor"])
 # =========================================================
 ALIGNMENT_STUDIO_HTML = r"""<!DOCTYPE html>
 <html lang="ar"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; }
-  body { font-family: 'Cairo','Segoe UI',Tahoma,Arial,sans-serif; background:#0A1220; color:#F2F5FA; margin:0; padding:10px; overflow:hidden; }
+  body { font-family: 'Cairo','Inter','Segoe UI',Tahoma,Arial,sans-serif; background:#0A1220; color:#F2F5FA; margin:0; padding:10px; overflow:hidden; -webkit-font-smoothing:antialiased; }
   #bar { display:flex; gap:10px; align-items:center; margin-bottom:12px; direction:rtl; flex-wrap:wrap; }
   #toast { color:#E8C069; font-size:13px; font-weight:600; }
   #alignmentScroll {
@@ -423,25 +426,25 @@ ALIGNMENT_STUDIO_HTML = r"""<!DOCTYPE html>
   .segment-row::before { content:''; position:absolute; right:0; top:8px; bottom:8px; width:3px; background:linear-gradient(180deg,#C9963C,#A87B2E); border-radius:3px; opacity:0; transition:opacity 0.2s; }
   .segment-row:hover { border-color:#2A4066; box-shadow:0 2px 16px rgba(2,6,14,0.45); }
   .segment-row:hover::before { opacity:1; }
-  .segment-num { color:#C9963C; font-weight:800; width:42px; text-align:center; font-size:13px; flex-shrink:0; letter-spacing:0.5px; }
+  .segment-num { color:#E8C069; font-weight:800; width:42px; text-align:center; font-size:13px; flex-shrink:0; letter-spacing:0.5px; font-family:'Inter','Cairo',sans-serif; }
   .cell { flex:1; display:flex; gap:6px; align-items:stretch; min-width:0; border:2px solid transparent; border-radius:8px; transition:border-color 0.18s, background 0.18s; }
   .cell.drag-over { border:2px dashed #C9963C; background:rgba(201,150,60,0.10); }
   .handle-container { display:flex; flex-direction:column; gap:2px; flex-shrink:0; align-items:center; justify-content:center; }
-  .handle { width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:#14243E; border-radius:5px; color:#566E93; cursor:grab; user-select:none; font-size:12px; border:1px solid #1D3050; transition:all 0.18s; }
-  .handle:hover { color:#C9963C; border-color:rgba(201,150,60,0.35); background:#1B2E4D; }
-  .move-btn { width:22px; height:18px; display:flex; align-items:center; justify-content:center; background:#14243E; border:1px solid #1D3050; border-radius:4px; color:#566E93; cursor:pointer; font-size:10px; padding:0; transition:all 0.18s; }
-  .move-btn:hover { background:#1B2E4D; color:#C9963C; border-color:rgba(201,150,60,0.35); }
-  .card-box { flex:1; min-width:0; background:#14243E; border:1px solid #1D3050; border-radius:8px; padding:10px 14px; min-height:55px; font-size:14px; line-height:1.75; white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; transition:border-color 0.18s, background 0.18s, box-shadow 0.18s; }
+  .handle { width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:#14243E; border-radius:5px; color:#8FA4C4; cursor:grab; user-select:none; font-size:12px; border:1px solid #1D3050; transition:all 0.18s; }
+  .handle:hover { color:#E8C069; border-color:rgba(201,150,60,0.35); background:#1B2E4D; }
+  .move-btn { width:22px; height:18px; display:flex; align-items:center; justify-content:center; background:#14243E; border:1px solid #1D3050; border-radius:4px; color:#8FA4C4; cursor:pointer; font-size:10px; padding:0; transition:all 0.18s; }
+  .move-btn:hover { background:#1B2E4D; color:#E8C069; border-color:rgba(201,150,60,0.35); }
+  .card-box { flex:1; min-width:0; background:#14243E; border:1px solid #1D3050; border-radius:8px; padding:10px 14px; min-height:55px; font-size:14.5px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; transition:border-color 0.18s, background 0.18s, box-shadow 0.18s; }
   .card-box:focus { outline:none; border-color:#C9963C; background:#0F1B30; box-shadow:0 0 0 3px rgba(201,150,60,0.12); }
-  .en-box { direction:ltr; text-align:left; color:#8FBBEA; }
-  .ar-box { direction:rtl; text-align:right; color:#E8C069; }
+  .en-box { direction:ltr; text-align:left; color:#E6EFFA; font-family:'Inter','Segoe UI',sans-serif; border-left:3px solid rgba(74,125,191,0.55); }
+  .ar-box { direction:rtl; text-align:right; color:#FAF6EC; font-family:'Cairo','Segoe UI',sans-serif; border-right:3px solid rgba(201,150,60,0.55); }
   .action-btn-group { display:flex; flex-direction:column; gap:5px; flex-shrink:0; }
-  .btn-ctrl { background:#14243E; color:#93A5C4; border:1px solid #1D3050; border-radius:6px; padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.18s; }
-  .btn-ctrl:hover { background:#1B2E4D; color:#C9963C; border-color:rgba(201,150,60,0.35); }
+  .btn-ctrl { background:#14243E; color:#B0C0DA; border:1px solid #1D3050; border-radius:6px; padding:5px 9px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.18s; }
+  .btn-ctrl:hover { background:#1B2E4D; color:#E8C069; border-color:rgba(201,150,60,0.35); }
   .btn-del:hover { background:#3B0A0A; color:#FCA5A5; border-color:rgba(214,69,69,0.35); }
   .add-row-btn { background:linear-gradient(135deg,#E8C069 0%,#C9963C 55%,#A87B2E 100%); color:#0A1220; font-weight:800; border:none; border-radius:8px; padding:10px 20px; cursor:pointer; font-family:inherit; font-size:13px; box-shadow:0 4px 14px rgba(201,150,60,0.30); transition:all 0.2s; }
   .add-row-btn:hover { transform:translateY(-2px); box-shadow:0 6px 22px rgba(201,150,60,0.42); filter:brightness(1.06); }
-  .undo-btn { background:#14243E; color:#93A5C4; border:1px solid #1D3050; border-radius:8px; padding:10px 16px; cursor:pointer; font-weight:700; font-family:inherit; font-size:13px; transition:all 0.18s; }
+  .undo-btn { background:#14243E; color:#B0C0DA; border:1px solid #1D3050; border-radius:8px; padding:10px 16px; cursor:pointer; font-weight:700; font-family:inherit; font-size:13px; transition:all 0.18s; }
   .undo-btn:hover { background:#1B2E4D; color:#F2F5FA; border-color:#2A4066; }
 </style></head>
 <body>
