@@ -764,6 +764,13 @@ Arabic, ONE sentence, 10–30 words, authoritative formal legal register, built 
 SUBJECT FIELD
 Choose the most accurate legal sub-field from this list: Contract Law; Civil Liability; Property Law; Commercial Law; Company Law; Banking and Finance Law; Insurance Law; Civil Procedure; Criminal Law; Criminal Procedure; Administrative Law; Constitutional Law; Labour Law; Family and Personal Status Law; Arbitration and ADR; International Public Law; Private International Law; Maritime Law; Intellectual Property Law; Islamic Law; General Legal Terms.
 
+EXHAUSTIVE UNIT REVIEW
+Examine the WHOLE aligned unit, English and Arabic side by side, from the first word to the last, and extract EVERY valid term it contains, not only the first or most obvious ones.
+
+NO DUPLICATES
+- Output each (en, ar) pair at most once.
+- If the user message ends with an "ALREADY EXTRACTED" list, those pairs were taken from earlier units. Do NOT output them again, even in a different inflection or word order. Output only NEW terms found in this unit. If the unit has no new valid term, return {"terms":[]}.
+
 OUTPUT
 Strictly valid JSON and nothing else: no markdown, no code fences, no comments:
 {"terms":[{"tu_id":"1","en":"...","ar":"...","definition":"...","subject_field":"..."}]}
@@ -792,7 +799,7 @@ Correct output:
 {"terms":[]}
 """
 
-                results = []
+                seen = {}  # مفتاح المصطلح (en|ar بعد التطبيع) -> بياناته مع كل نصوص المصدر
                 progress_bar = st.progress(0)
                 status_text = st.empty()
 
@@ -810,6 +817,13 @@ Correct output:
                     en_send = en_text[:MAX_CHARS // 2] if len(en_text) > MAX_CHARS // 2 else en_text
                     ar_send = ar_text[:MAX_CHARS // 2] if len(ar_text) > MAX_CHARS // 2 else ar_text
                     user_prompt = f'<tu id="{i+1}"><en>{xml_escape(en_send)}</en><ar>{xml_escape(ar_send)}</ar></tu>'
+                    if seen:
+                        # قائمة المصطلحات المستخرجة مسبقاً حتى لا يكررها النموذج (آخر 300 لتقليل التكلفة)
+                        known = list(seen.values())[-300:]
+                        user_prompt += (
+                            "\n\nALREADY EXTRACTED (do not output these pairs again):\n"
+                            + "\n".join(f"- {r['en']} = {r['ar']}" for r in known)
+                        )
 
                     try:
                         try:
@@ -852,34 +866,49 @@ Correct output:
                                     continue
                                 en_val = _s(item, "en")
                                 ar_val = _strip_ar_diacritics(_s(item, "ar"))
-                                if not _is_low_value_term(en_val, ar_val):
-                                    subj = _s(item, "subject_field") or _s(item, "subject field") or "قانون عام"
-                                    results.append({
-                                        "en": en_val,
-                                        "ar": ar_val,
-                                        "Definition": _s(item, "definition"),
-                                        "Subject field": subj,
-                                        "en Source text": en_text,
-                                        "ar Source text": ar_text,
-                                    })
+                                if _is_low_value_term(en_val, ar_val):
+                                    continue
+                                key = _term_key(en_val) + "|" + _term_key(ar_val)
+                                if key in seen:
+                                    continue
+                                subj = _s(item, "subject_field") or _s(item, "subject field") or "قانون عام"
+                                seen[key] = {
+                                    "en": en_val,
+                                    "ar": ar_val,
+                                    "Definition": _s(item, "definition"),
+                                    "Subject field": subj,
+                                    "en_srcs": [en_text],
+                                    "ar_srcs": [ar_text],
+                                }
                     except Exception as e:
                         st.warning(f"تنبيه في الوحدة {i+1}: {e}")
+
+                    # إضافة هذه الوحدة كنص مصدر إضافي لأي مصطلح مستخرج سابقاً يرد فيها (بدون تكرار المصطلح نفسه)
+                    unit_en_key = f" {_term_key(en_text)} "
+                    unit_ar_key = f" {_term_key(ar_text)} "
+                    for r in seen.values():
+                        if en_text in r["en_srcs"]:
+                            continue
+                        if f" {_term_key(r['en'])} " in unit_en_key and f" {_term_key(r['ar'])} " in unit_ar_key:
+                            r["en_srcs"].append(en_text)
+                            r["ar_srcs"].append(ar_text)
 
                     progress_bar.progress((i + 1) / len(aligned_units))
 
                 status_text.text("✅ اكتمل الاستخراج والتصفية بنجاح!")
 
-                if results:
-                    df = pd.DataFrame(results)
-                    df["_key"] = df["en"].map(_term_key) + "|" + df["ar"].map(_term_key)
-                    df = pd.DataFrame(df.groupby("_key", as_index=False, sort=False).agg({
-                        "en": "first",
-                        "ar": "first",
-                        "Definition": "first",
-                        "Subject field": "first",
-                        "en Source text": lambda x: "\n---\n".join(dict.fromkeys(x)),
-                        "ar Source text": lambda x: "\n---\n".join(dict.fromkeys(x)),
-                    })).drop(columns=["_key"])
+                if seen:
+                    df = pd.DataFrame([
+                        {
+                            "en": r["en"],
+                            "ar": r["ar"],
+                            "Definition": r["Definition"],
+                            "Subject field": r["Subject field"],
+                            "en Source text": "\n---\n".join(dict.fromkeys(r["en_srcs"])),
+                            "ar Source text": "\n---\n".join(dict.fromkeys(r["ar_srcs"])),
+                        }
+                        for r in seen.values()
+                    ])
                     # ترقيم تسلسلي للمصطلحات (1..N) بعد إزالة التكرار
                     df["ID"] = list(range(1, len(df) + 1))
                     df = df[["ID", "en", "ar", "Definition", "Subject field", "en Source text", "ar Source text"]]
