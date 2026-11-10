@@ -7,3 +7,4 @@ alignment_studio_component/
 
 # Environment
 .env
+.venv/

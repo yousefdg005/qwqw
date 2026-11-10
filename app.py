@@ -8,6 +8,8 @@ import re
 import time
 import unicodedata
 import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as DefusedET
+from defusedxml import DefusedXmlException
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
@@ -354,8 +356,8 @@ def process_docx_text_to_segments(text):
 
 def parse_tmx_bytes(tmx_content):
     try:
-        root = ET.fromstring(tmx_content)
-    except (ET.ParseError, TypeError, ValueError) as exc:
+        root = DefusedET.fromstring(tmx_content)
+    except (ET.ParseError, DefusedXmlException, TypeError, ValueError) as exc:
         raise ValueError(f"ملف TMX غير صالح: {exc}") from exc
     pairs=[]
     for tu in root.iter():
@@ -381,6 +383,14 @@ def generate_tmx_file(pairs):
             tuv=ET.SubElement(tu,"tuv", {"{http://www.w3.org/XML/1998/namespace}lang":lang})
             ET.SubElement(tuv,"seg").text=_XML_BAD_RE.sub("",str(text or ""))
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+
+# منع ثغرة حقن الصيغ (Formula Injection) في ملفات Excel و CSV
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+def _sanitize_spreadsheet_cell(value):
+    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
+        return "'" + value
+    return value
 
 
 # =========================================================
@@ -660,7 +670,7 @@ with tab1:
             st.subheader("🧩 الخطوة 2: استوديو المحاذاة التفاعلي")
             
             initial_pairs = [{"en": e, "ar": a} for e, a in aligned_initial]
-            token = hashlib.md5((text_en + "\x00" + text_ar).encode("utf-8")).hexdigest()
+            token = hashlib.sha256((text_en + "\x00" + text_ar).encode("utf-8")).hexdigest()
 
             studio_value = alignment_studio(pairs=initial_pairs, token=token, key="alignment_studio", default=None)
             current_pairs = studio_value if studio_value is not None else initial_pairs
@@ -703,7 +713,11 @@ with tab2:
     )
 
     if uploaded_tmx is not None:
-        aligned_units = parse_tmx_bytes(uploaded_tmx.read())
+        try:
+            aligned_units = parse_tmx_bytes(uploaded_tmx.read())
+        except ValueError as exc:
+            st.error(f"⚠️ {exc}")
+            aligned_units = []
     else:
         aligned_units = st.session_state["aligned_pairs"]
 
@@ -951,6 +965,7 @@ Correct output:
         # إعادة الترقيم التسلسلي للمصطلحات في ملفات التحميل حتى بعد أي تعديل أو حذف بالجدول
         export_df["ID"] = list(range(1, len(export_df) + 1))
         export_df = export_df[["ID", "en", "ar", "Definition", "Subject field", "en Source text", "ar Source text"]]
+        export_df = export_df.map(_sanitize_spreadsheet_cell)
 
         excel_buffer = io.BytesIO()
         with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
