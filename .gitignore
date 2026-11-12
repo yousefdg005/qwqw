@@ -1,0 +1,10 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Runtime-generated Streamlit component (auto-written by app.py)
+alignment_studio_component/
+
+# Environment
+.env
+.venv/
