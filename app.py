@@ -960,6 +960,24 @@ Correct output:
         st.session_state["results_df"] = edited_df
         df_res = edited_df
 
+        if os.environ.get("INGEST_API_KEY"):
+            if st.button("🚀 إرسال التعديلات المحدثة إلى القاموس", key="sync_edited_terms_btn"):
+                edited_terms_to_send = [
+                    {
+                        "en": str(row.get("en", "")).strip(),
+                        "ar": str(row.get("ar", "")).strip(),
+                        "definition": str(row.get("Definition", "") or row.get("definition", "")).strip(),
+                        "subject field": str(row.get("Subject field", "") or row.get("subject field", "")).strip(),
+                        "source_text_en": str(row.get("en Source text", "") or row.get("source text en", "") or row.get("source_text_en", "")).strip(),
+                        "source_text_ar": str(row.get("ar Source text", "") or row.get("source text ar", "") or row.get("source_text_ar", "")).strip(),
+                        "source text en": str(row.get("en Source text", "") or row.get("source text en", "") or row.get("source_text_en", "")).strip(),
+                        "source text ar": str(row.get("ar Source text", "") or row.get("source text ar", "") or row.get("source_text_ar", "")).strip(),
+                    }
+                    for _, row in df_res.iterrows() if str(row.get("en", "")).strip()
+                ]
+                if edited_terms_to_send and send_to_dictionary(edited_terms_to_send):
+                    st.success("🚀 تم إرسال المصطلحات المعدلة وتحديثها في القاموس بنجاح!")
+
         # تجهيز التصدير بجميع الأعمدة المطلوبة (Excel وCSV فقط — بدون PDF أو Word)
         export_df = df_res.copy()
         # إعادة الترقيم التسلسلي للمصطلحات في ملفات التحميل حتى بعد أي تعديل أو حذف بالجدول
