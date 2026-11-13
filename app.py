@@ -164,7 +164,8 @@ if ai_provider == "google":
         placeholder="AIzaSy...",
     )
     MODELS_MAPPING = {
-        "Gemini 3.5 Flash Lite": "gemini-3.5-flash-lite",
+        "Gemini 4 Hydrogen": "gemini-4-hydrogen",
+        "Gemini Pro": "gemini-2.5-pro",
     }
 else:
     st.sidebar.markdown(
