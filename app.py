@@ -164,8 +164,9 @@ if ai_provider == "google":
         placeholder="AIzaSy...",
     )
     MODELS_MAPPING = {
-        "Gemini 4 Hydrogen": "gemini-4-hydrogen",
-        "Gemini Pro": "gemini-2.5-pro",
+        "Google Gemini 2.5 Flash (الأسرع والموصى به)": "gemini-2.5-flash",
+        "Google Gemini 1.5 Flash (سريع ومستقر)": "gemini-1.5-flash",
+        "Google Gemini 2.5 Pro (تحليل لغوي دقيق)": "gemini-2.5-pro",
     }
 else:
     st.sidebar.markdown(
@@ -898,13 +899,9 @@ Correct output:
                                 return r
 
                             resp = _call_google(active_model_id)
-                            if resp.status_code == 404:
-                                for fb_model in ("gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash"):
-                                    if active_model_id != fb_model:
-                                        resp = _call_google(fb_model)
-                                        if resp.status_code != 404:
-                                            active_model_id = fb_model
-                                            break
+                            if resp.status_code == 404 and active_model_id != "gemini-1.5-flash":
+                                active_model_id = "gemini-1.5-flash"
+                                resp = _call_google(active_model_id)
                             if resp.status_code >= 400:
                                 err_detail = resp.text
                                 try:
