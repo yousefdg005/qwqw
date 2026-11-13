@@ -133,44 +133,8 @@ st.markdown(
 # =========================================================
 st.sidebar.header("⚙️ إعدادات النظام")
 
-PROVIDER_MAPPING = {
-    "Google AI Studio (Gemini) — مجاني وموصى به": "google",
-    "OpenRouter — نماذج متعددة": "openrouter",
-}
-
-selected_provider_label = st.sidebar.selectbox(
-    "مزود الخدمة (AI Provider):",
-    options=list(PROVIDER_MAPPING.keys()),
-    index=0,
-)
-ai_provider = PROVIDER_MAPPING[selected_provider_label]
-
-if ai_provider == "google":
-    st.sidebar.markdown(
-        """
-<div style="background-color: #14243E; padding: 12px; border-radius: 8px; border: 1px solid #2A4066; margin-bottom: 15px; text-align: center;">
-    <span style="color: #F2F5FA; font-size: 13px;">ليس لديك مفتاح Google API؟</span><br>
-    <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #E8C069; font-weight: bold; text-decoration: none; font-size: 14px; display: inline-block; margin-top: 5px;">
-        🔗 الحصول على مفتاح مجاني من Google AI Studio
-    </a>
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-    api_key = st.sidebar.text_input(
-        "🔑 مفتاح API الخاص بـ Google:",
-        value="",
-        type="password",
-        placeholder="AIzaSy...",
-    )
-    MODELS_MAPPING = {
-        "Google Gemini 2.5 Flash (الأسرع والموصى به)": "gemini-2.5-flash",
-        "Google Gemini 1.5 Flash (سريع ومستقر)": "gemini-1.5-flash",
-        "Google Gemini 2.5 Pro (تحليل لغوي دقيق)": "gemini-2.5-pro",
-    }
-else:
-    st.sidebar.markdown(
-        """
+st.sidebar.markdown(
+    """
 <div style="background-color: #14243E; padding: 12px; border-radius: 8px; border: 1px solid #2A4066; margin-bottom: 15px; text-align: center;">
     <span style="color: #F2F5FA; font-size: 13px;">ليس لديك مفتاح API؟</span><br>
     <a href="https://openrouter.ai/keys" target="_blank" style="color: #E8C069; font-weight: bold; text-decoration: none; font-size: 14px; display: inline-block; margin-top: 5px;">
@@ -178,28 +142,30 @@ else:
     </a>
 </div>
 """,
-        unsafe_allow_html=True,
-    )
-    api_key = st.sidebar.text_input(
-        "🔑 مفتاح API الخاص بـ OpenRouter:",
-        value="",
-        type="password",
-        placeholder="sk-or-v1-...",
-    )
-    MODELS_MAPPING = {
-        "⚡ Gemini 2.5 Flash": "google/gemini-2.5-flash",
-        "⚡ Gemini 3.8 Flash": "google/gemini-3.8-flash",
-        "⚖️ GPT-4o Mini": "openai/gpt-4o-mini",
-        "🦙 Llama 4 Maverick": "meta-llama/llama-4-maverick",
-    }
+    unsafe_allow_html=True,
+)
 
-st.sidebar.subheader("🤖 اختيار النموذج")
+api_key = st.sidebar.text_input(
+    "🔑 مفتاح OpenRouter API Key الخاص بك:",
+    value="",
+    type="password",
+    placeholder="sk-or-v1-...",
+)
+
+PAID_MODELS_MAPPING = {
+    "⚡ Gemini 2.5 Flash": "google/gemini-2.5-flash",
+    "⚡ Gemini 3.8 Flash": "google/gemini-3.8-flash",
+    "⚖️ GPT-4o Mini": "openai/gpt-4o-mini",
+    "🦙 Llama 4 Maverick": "meta-llama/llama-4-maverick",
+}
+
+st.sidebar.subheader("🤖 اختيار النموذج المراد استعماله")
 selected_model_label = st.sidebar.selectbox(
-    "اختيار النموذج:",
-    options=list(MODELS_MAPPING.keys()),
+    "اختر النموذج لتنفيذ عملية التصفية والاستخراج:",
+    options=list(PAID_MODELS_MAPPING.keys()),
     index=0,
 )
-selected_model_id = MODELS_MAPPING[selected_model_label]
+selected_model_id = PAID_MODELS_MAPPING[selected_model_label]
 
 with st.sidebar:
     st.markdown("---")
@@ -758,16 +724,11 @@ with tab2:
     if aligned_units:
         if st.button("⚡ بدء الاستخراج الذكي والتصفية الصارمة"):
             if not api_key.strip():
-                provider_name = "Google AI Studio" if ai_provider == "google" else "OpenRouter"
-                st.error(f"⚠️ يرجى إدخال مفتاح API الخاص بـ {provider_name} أولاً.")
+                st.error("⚠️ يرجى إدخال مفتاح OpenRouter API Key أولاً.")
             else:
-                client = (
-                    OpenAI(
-                        base_url="https://openrouter.ai/api/v1",
-                        api_key=api_key.strip(),
-                    )
-                    if ai_provider == "openrouter"
-                    else None
+                client = OpenAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=api_key.strip(),
                 )
 
                 system_prompt = """ROLE
@@ -879,45 +840,19 @@ Correct output:
                         )
 
                     try:
-                        if ai_provider == "google":
-                            def _call_google(model_name: str):
-                                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
-                                payload = {
-                                    "systemInstruction": {"parts": [{"text": system_prompt}]},
-                                    "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
-                                    "generationConfig": {
-                                        "temperature": 0.0,
-                                        "responseMimeType": "application/json",
-                                    },
-                                }
-                                r = requests.post(
-                                    url,
-                                    params={"key": api_key.strip()},
-                                    json=payload,
-                                    timeout=60,
-                                )
-                                return r
-
-                            resp = _call_google(active_model_id)
-                            if resp.status_code == 404 and active_model_id != "gemini-1.5-flash":
-                                active_model_id = "gemini-1.5-flash"
-                                resp = _call_google(active_model_id)
-                            if resp.status_code >= 400:
-                                err_detail = resp.text
-                                try:
-                                    err_detail = resp.json().get("error", {}).get("message", resp.text)
-                                except Exception:
-                                    pass
-                                raise RuntimeError(f"Google API ({resp.status_code}): {err_detail}")
-                            resp_json = resp.json()
-                            raw_text = (
-                                resp_json.get("candidates", [{}])[0]
-                                .get("content", {})
-                                .get("parts", [{}])[0]
-                                .get("text", "")
+                        try:
+                            response = client.chat.completions.create(
+                                model=active_model_id,
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_prompt},
+                                ],
+                                temperature=0.0,
+                                response_format={"type": "json_object"},
                             )
-                        else:
-                            try:
+                        except Exception as model_err:
+                            if active_model_id == "google/gemini-3.8-flash" and ("404" in str(model_err) or "400" in str(model_err) or "not found" in str(model_err).lower() or "invalid" in str(model_err).lower()):
+                                active_model_id = "google/gemini-2.5-flash"
                                 response = client.chat.completions.create(
                                     model=active_model_id,
                                     messages=[
@@ -927,22 +862,10 @@ Correct output:
                                     temperature=0.0,
                                     response_format={"type": "json_object"},
                                 )
-                            except Exception as model_err:
-                                if active_model_id == "google/gemini-3.8-flash" and ("404" in str(model_err) or "400" in str(model_err) or "not found" in str(model_err).lower() or "invalid" in str(model_err).lower()):
-                                    active_model_id = "google/gemini-2.5-flash"
-                                    response = client.chat.completions.create(
-                                        model=active_model_id,
-                                        messages=[
-                                            {"role": "system", "content": system_prompt},
-                                            {"role": "user", "content": user_prompt},
-                                        ],
-                                        temperature=0.0,
-                                        response_format={"type": "json_object"},
-                                    )
-                                else:
-                                    raise
+                            else:
+                                raise
 
-                            raw_text = response.choices[0].message.content or ""
+                        raw_text = response.choices[0].message.content or ""
                         # حماية إضافية: إزالة أي محيط Markdown قد يضيفه النموذج رغم التعليمات الصارمة
                         cleaned = raw_text.strip()
                         if cleaned.startswith("```"):
